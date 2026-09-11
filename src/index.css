@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Archivo Black", "Arial Black", sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
+
+  --color-surface: #0b0d0e;
+  --color-surface-alt: #101314;
+  --color-brand-neon: #ccff00;
+  --color-brand-blue: #2563eb;
+  --color-brand-card: #14181a;
+  --color-brand-card-border: rgba(204, 255, 0, 0.15);
+  --color-ink: #f4f7f2;
+  --color-ink-muted: #9aa39c;
+
+  --shadow-neon: 0 0 24px 0 rgba(204, 255, 0, 0.35);
+  --shadow-neon-strong: 0 0 48px 4px rgba(204, 255, 0, 0.45);
+
+  --animate-pulse-soft: pulse-soft 2.6s ease-in-out infinite;
+  --animate-marquee: marquee 28s linear infinite;
+
+  @keyframes pulse-soft {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(204, 255, 0, 0.45);
+    }
+    50% {
+      box-shadow: 0 0 0 14px rgba(204, 255, 0, 0);
+    }
+  }
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+}
+
+@layer base {
+  * {
+    scrollbar-color: var(--color-brand-neon) var(--color-surface);
+  }
+
+  html {
+    background-color: var(--color-surface);
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-surface);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .text-hud {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bg-noise {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  }
+
+  .edge-fade-b {
+    mask-image: linear-gradient(to bottom, black 70%, transparent 100%);
+  }
+}

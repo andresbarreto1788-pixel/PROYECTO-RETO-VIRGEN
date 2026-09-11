@@ -1,0 +1,38 @@
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+CREATE TABLE IF NOT EXISTS athletes (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  full_name VARCHAR(150) NOT NULL,
+  ci VARCHAR(20) UNIQUE NOT NULL,
+  phone VARCHAR(30) NOT NULL,
+  emergency_contact VARCHAR(100) NOT NULL,
+  blood_type VARCHAR(10) NOT NULL,
+  route VARCHAR(20) NOT NULL, -- '33K_REDOMA' | '22K_ILUSTRES'
+  jersey_size VARCHAR(10) NOT NULL, -- 'S', 'M', 'L', 'XL', 'XXL'
+  payment_status VARCHAR(20) DEFAULT 'PENDING_REVIEW', -- 'PENDING_REVIEW' | 'PARTIAL' | 'PAID' | 'REJECTED'
+  total_amount_usd NUMERIC(8, 2) NOT NULL,
+  bib_number INT UNIQUE NULL,
+  checked_in BOOLEAN DEFAULT FALSE,
+  checked_in_at TIMESTAMP NULL,
+  qr_token UUID UNIQUE DEFAULT gen_random_uuid(),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS payments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id UUID REFERENCES athletes(id) ON DELETE CASCADE,
+  amount_bs NUMERIC(12, 2) NOT NULL,
+  amount_usd_equiv NUMERIC(8, 2) NOT NULL,
+  bcv_rate NUMERIC(10, 4) NOT NULL,
+  reference VARCHAR(50) NOT NULL,
+  bank_origin VARCHAR(50) NULL,
+  proof_url TEXT NULL,
+  status VARCHAR(20) DEFAULT 'PENDING', -- 'PENDING' | 'APPROVED' | 'REJECTED'
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_payments_athlete_id ON payments(athlete_id);
+
+-- Asignación de dorsales libre de condiciones de carrera: nextval() es atómico
+-- incluso bajo escaneos concurrentes en el paddock, a diferencia de MAX(bib_number)+1.
+CREATE SEQUENCE IF NOT EXISTS bib_number_seq START 1;
