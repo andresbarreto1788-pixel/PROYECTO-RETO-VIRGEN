@@ -67,6 +67,14 @@ export async function adminPatch<T>(path: string, body: Record<string, unknown>)
   return parseResponse<T>(res);
 }
 
+export async function adminDelete<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "DELETE",
+    headers: authHeaders(),
+  });
+  return parseResponse<T>(res);
+}
+
 export async function adminDownloadExport(): Promise<void> {
   const res = await fetch(`${API_BASE}/api/admin/export`, { headers: authHeaders() });
   if (!res.ok) throw new ApiError(`No se pudo exportar el CSV (HTTP ${res.status}).`);

@@ -1,7 +1,11 @@
+import { Pencil, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { API_BASE, ApiError, adminDownloadExport, adminGet, adminPatch } from "../../lib/api";
+import { API_BASE, ApiError, adminDelete, adminDownloadExport, adminGet, adminPatch } from "../../lib/api";
 import { formatBs, formatUsd } from "../../lib/format";
 import type { Athlete, AthleteListResponse, AthleteRoute, PaymentStatus } from "../../types/admin";
+import { AddPaymentModal } from "./AddPaymentModal";
+import { ConfirmDialog } from "./ConfirmDialog";
+import { EditAthleteModal } from "./EditAthleteModal";
 
 interface AthleteTableProps {
   onMutated: () => void;
@@ -36,6 +40,10 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
   const [loading, setLoading] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busyAthleteId, setBusyAthleteId] = useState<string | null>(null);
+  const [editingAthlete, setEditingAthlete] = useState<Athlete | null>(null);
+  const [payingAthlete, setPayingAthlete] = useState<Athlete | null>(null);
+  const [deletingAthlete, setDeletingAthlete] = useState<Athlete | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -88,16 +96,27 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
   }
 
   function handleAddPayment(athlete: Athlete) {
-    const amountBs = Number(window.prompt(`Abono en Bs para ${athlete.fullName}:`, ""));
-    if (!amountBs || amountBs <= 0) return;
-    const bcvRate = Number(window.prompt("Tasa BCV usada en ese abono:", ""));
-    if (!bcvRate || bcvRate <= 0) return;
-    const reference = window.prompt("Referencia del abono:", "");
-    if (!reference) return;
+    setPayingAthlete(athlete);
+  }
 
-    runAction(athlete.id, () =>
-      adminPatch(`/api/admin/athletes/${athlete.id}/payment`, { action: "add_payment", amountBs, bcvRate, reference }),
-    );
+  function handleDelete(athlete: Athlete) {
+    setDeletingAthlete(athlete);
+  }
+
+  async function handleConfirmDelete() {
+    if (!deletingAthlete) return;
+    setDeleting(true);
+    setActionError(null);
+    try {
+      await adminDelete(`/api/admin/athletes/${deletingAthlete.id}`);
+      setDeletingAthlete(null);
+      await load();
+      onMutated();
+    } catch (err) {
+      setActionError(err instanceof ApiError ? err.message : "No se pudo eliminar el atleta.");
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -238,6 +257,26 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
                       >
                         Rechazar
                       </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => setEditingAthlete(athlete)}
+                        title="Editar atleta"
+                        aria-label="Editar atleta"
+                        className="rounded-full bg-white/10 p-1.5 text-ink-muted transition-colors hover:text-ink disabled:opacity-30"
+                      >
+                        <Pencil size={12} />
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleDelete(athlete)}
+                        title="Eliminar atleta"
+                        aria-label="Eliminar atleta"
+                        className="rounded-full bg-red-500/15 p-1.5 text-red-400 transition-colors hover:text-red-300 disabled:opacity-30"
+                      >
+                        <Trash2 size={12} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -277,6 +316,42 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
           </button>
         </div>
       </div>
+
+      {editingAthlete && (
+        <EditAthleteModal
+          athlete={editingAthlete}
+          onClose={() => setEditingAthlete(null)}
+          onSaved={() => {
+            setEditingAthlete(null);
+            load();
+            onMutated();
+          }}
+        />
+      )}
+
+      {payingAthlete && (
+        <AddPaymentModal
+          athlete={payingAthlete}
+          onClose={() => setPayingAthlete(null)}
+          onSaved={() => {
+            setPayingAthlete(null);
+            load();
+            onMutated();
+          }}
+        />
+      )}
+
+      {deletingAthlete && (
+        <ConfirmDialog
+          title="Eliminar atleta"
+          message={`¿Eliminar a ${deletingAthlete.fullName} (${deletingAthlete.ci})? Esta acción no se puede deshacer y borrará también sus pagos registrados.`}
+          confirmLabel="Eliminar"
+          danger
+          busy={deleting}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeletingAthlete(null)}
+        />
+      )}
     </div>
   );
 }

@@ -156,12 +156,31 @@ export function QrScannerPanel({ onCheckedIn }: { onCheckedIn: () => void }) {
       )}
 
       {result && (
-        <div className="rounded-2xl border border-brand-neon/40 bg-surface p-6 text-center">
-          <CheckCircle2 size={32} className="mx-auto text-brand-neon" />
-          <p className="mt-3 text-2xl font-black uppercase text-ink">{result.fullName}</p>
-          {"bibNumber" in result && (
-            <p className="mt-2 text-hud text-4xl font-black text-brand-neon">Dorsal #{result.bibNumber}</p>
+        <div
+          className={`rounded-2xl border p-6 text-center ${
+            result.status === "blocked" ? "border-red-500/40 bg-surface" : "border-brand-neon/40 bg-surface"
+          }`}
+        >
+          {result.status === "blocked" ? (
+            <XCircle size={32} className="mx-auto text-red-400" />
+          ) : (
+            <CheckCircle2 size={32} className="mx-auto text-brand-neon" />
           )}
+          <p className="mt-3 text-2xl font-black uppercase text-ink">{result.fullName}</p>
+
+          {result.status === "blocked" ? (
+            <p className="mt-4 inline-flex items-center gap-2 rounded-full bg-red-500/15 px-4 py-2 text-xs font-bold uppercase tracking-widest text-red-400">
+              <XCircle size={16} /> Check-in bloqueado — saldo pendiente {formatUsd(result.owedUsd)}
+            </p>
+          ) : (
+            <>
+              <p className="mt-2 text-hud text-4xl font-black text-brand-neon">Dorsal #{result.bibNumber}</p>
+              {result.status === "already_checked_in" && (
+                <p className="mt-2 text-[10px] uppercase tracking-widest text-ink-muted">Ya tenía el check-in hecho</p>
+              )}
+            </>
+          )}
+
           <button
             type="button"
             onClick={reset}

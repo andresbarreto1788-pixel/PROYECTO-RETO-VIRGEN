@@ -7,6 +7,8 @@ import { serializeAthlete } from "../lib/serialize.js";
 export const adminRouter = Router();
 
 const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL"] as const;
+const ROUTES = ["33K_REDOMA", "22K_ILUSTRES"] as const;
+const BLOOD_TYPES = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"] as const;
 
 function csvEscape(value: unknown): string {
   const str = String(value ?? "");
@@ -134,6 +136,78 @@ adminRouter.get("/athletes", requireAdmin, async (req, res) => {
     page,
     pageSize,
   });
+});
+
+// --- Editar / eliminar atleta ---------------------------------------------
+
+const EDITABLE_FIELDS = ["fullName", "ci", "phone", "emergencyContact", "bloodType", "route", "jerseySize"] as const;
+const FIELD_TO_COLUMN: Record<(typeof EDITABLE_FIELDS)[number], string> = {
+  fullName: "full_name",
+  ci: "ci",
+  phone: "phone",
+  emergencyContact: "emergency_contact",
+  bloodType: "blood_type",
+  route: "route",
+  jerseySize: "jersey_size",
+};
+
+adminRouter.patch("/athletes/:id", requireAdmin, async (req, res) => {
+  const id = String(req.params.id);
+  const body = req.body as Partial<Record<(typeof EDITABLE_FIELDS)[number], string>>;
+
+  const updates = EDITABLE_FIELDS.filter((field) => body[field] !== undefined);
+  if (updates.length === 0) {
+    res.status(400).json({ error: "No hay campos para actualizar." });
+    return;
+  }
+  if (updates.some((field) => !String(body[field]).trim())) {
+    res.status(400).json({ error: "Ningún campo puede quedar vacío." });
+    return;
+  }
+  if (body.route !== undefined && !ROUTES.includes(body.route as (typeof ROUTES)[number])) {
+    res.status(400).json({ error: "Ruta inválida." });
+    return;
+  }
+  if (body.jerseySize !== undefined && !JERSEY_SIZES.includes(body.jerseySize as (typeof JERSEY_SIZES)[number])) {
+    res.status(400).json({ error: "Talla inválida." });
+    return;
+  }
+  if (body.bloodType !== undefined && !BLOOD_TYPES.includes(body.bloodType as (typeof BLOOD_TYPES)[number])) {
+    res.status(400).json({ error: "Tipo de sangre inválido." });
+    return;
+  }
+
+  const setClauses = updates.map((field, i) => `${FIELD_TO_COLUMN[field]} = $${i + 1}`);
+  const values = updates.map((field) => body[field]);
+
+  try {
+    const result = await pool.query(
+      `UPDATE athletes SET ${setClauses.join(", ")} WHERE id = $${values.length + 1} RETURNING *`,
+      [...values, id],
+    );
+    if (result.rows.length === 0) {
+      res.status(404).json({ error: "Atleta no encontrado." });
+      return;
+    }
+    res.json({ athlete: serializeAthlete(result.rows[0]) });
+  } catch (err) {
+    if (err && typeof err === "object" && "code" in err && err.code === "23505") {
+      res.status(409).json({ error: "Ya existe otro atleta con esa cédula." });
+      return;
+    }
+    console.error("Error editando atleta:", err);
+    res.status(500).json({ error: "No se pudo actualizar el atleta." });
+  }
+});
+
+adminRouter.delete("/athletes/:id", requireAdmin, async (req, res) => {
+  const id = String(req.params.id);
+  const result = await pool.query("DELETE FROM athletes WHERE id = $1 RETURNING id", [id]);
+  if (result.rows.length === 0) {
+    res.status(404).json({ error: "Atleta no encontrado." });
+    return;
+  }
+  res.status(204).send();
 });
 
 // --- Aprobar / rechazar / registrar abono --------------------------------
