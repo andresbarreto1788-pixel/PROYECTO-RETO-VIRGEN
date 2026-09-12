@@ -1,16 +1,28 @@
 import "dotenv/config";
 import { mkdirSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import compression from "compression";
 import cors from "cors";
 import express from "express";
 import { MulterError } from "multer";
 import type { ErrorRequestHandler } from "express";
+import { pool } from "./db/pool.js";
 import { UPLOADS_DIR } from "./middleware/upload.js";
 import { registerRouter } from "./routes/register.js";
 import { adminRouter } from "./routes/admin.js";
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 mkdirSync(UPLOADS_DIR, { recursive: true });
+
+// Aplica schema.sql al arrancar (CREATE ... IF NOT EXISTS, idempotente) para que el
+// deploy nunca dependa de correr una migración aparte contra la base de producción.
+async function ensureSchema() {
+  const sql = await readFile(path.join(__dirname, "db/schema.sql"), "utf-8");
+  await pool.query(sql);
+}
 
 const app = express();
 const PORT = Number(process.env.PORT) || 4000;
@@ -63,6 +75,13 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
 };
 app.use(errorHandler);
 
-app.listen(PORT, () => {
-  console.log(`Servidor Reto Virgen de la Paz escuchando en el puerto ${PORT}`);
-});
+ensureSchema()
+  .catch((err) => {
+    console.error("Error aplicando el schema al arrancar:", err);
+    process.exit(1);
+  })
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log(`Servidor Reto Virgen de la Paz escuchando en el puerto ${PORT}`);
+    });
+  });

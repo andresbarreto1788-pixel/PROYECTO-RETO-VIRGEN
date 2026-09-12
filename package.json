@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "server:dev": "tsx watch server/src/index.ts",
-    "server:build": "tsc -p server/tsconfig.json",
+    "server:build": "tsc -p server/tsconfig.json && node -e \"require('fs').cpSync('server/src/db/schema.sql','dist-server/db/schema.sql')\"",
     "server:migrate": "tsx server/src/db/migrate.ts",
     "build:full": "npm run build && npm run server:build",
     "start": "node dist-server/index.js",
