@@ -1,7 +1,10 @@
 import { Router } from "express";
 import type { PoolClient } from "pg";
+import { z } from "zod";
 import { pool } from "../db/pool.js";
-import { requireAdmin, signAdminToken } from "../middleware/auth.js";
+import { requireAdmin, safeCompare, signAdminToken } from "../middleware/auth.js";
+import { loginLimiter } from "../middleware/rateLimit.js";
+import { validateBody } from "../middleware/validate.js";
 import { serializeAthlete } from "../lib/serialize.js";
 
 export const adminRouter = Router();
@@ -9,6 +12,20 @@ export const adminRouter = Router();
 const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL"] as const;
 const ROUTES = ["33K_REDOMA", "22K_ILUSTRES"] as const;
 const BLOOD_TYPES = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"] as const;
+
+const idNumberSchema = z
+  .string()
+  .trim()
+  .min(5, "Cédula o pasaporte inválido.")
+  .max(20, "Cédula o pasaporte inválido.")
+  .regex(/^[A-Za-z0-9-]+$/, "Cédula o pasaporte inválido.");
+
+const phoneSchema = z
+  .string()
+  .trim()
+  .min(7, "Teléfono inválido.")
+  .max(20, "Teléfono inválido.")
+  .regex(/^[0-9+()\- ]+$/, "Teléfono inválido.");
 
 function csvEscape(value: unknown): string {
   const str = String(value ?? "");
@@ -45,10 +62,15 @@ async function recomputeAthletePaymentStatus(client: PoolClient, athleteId: stri
 
 // --- Auth -------------------------------------------------------------
 
-adminRouter.post("/login", (req, res) => {
-  const { password } = req.body as { password?: string };
+const loginSchema = z.object({
+  password: z.string().min(1).max(200),
+});
 
-  if (!password || password !== process.env.ADMIN_PASSWORD) {
+adminRouter.post("/login", loginLimiter, validateBody(loginSchema), (req, res) => {
+  const { password } = req.body as z.infer<typeof loginSchema>;
+  const adminPassword = process.env.ADMIN_PASSWORD ?? "";
+
+  if (!adminPassword || !safeCompare(password, adminPassword)) {
     res.status(401).json({ error: "Contraseña incorrecta." });
     return;
   }
@@ -151,31 +173,24 @@ const FIELD_TO_COLUMN: Record<(typeof EDITABLE_FIELDS)[number], string> = {
   jerseySize: "jersey_size",
 };
 
-adminRouter.patch("/athletes/:id", requireAdmin, async (req, res) => {
+const editAthleteSchema = z
+  .object({
+    fullName: z.string().trim().min(3, "Nombre inválido.").max(150),
+    ci: idNumberSchema,
+    phone: phoneSchema,
+    emergencyContact: z.string().trim().min(3, "Contacto de emergencia inválido.").max(100),
+    bloodType: z.enum(BLOOD_TYPES, { message: "Tipo de sangre inválido." }),
+    route: z.enum(ROUTES, { message: "Ruta inválida." }),
+    jerseySize: z.enum(JERSEY_SIZES, { message: "Talla inválida." }),
+  })
+  .partial()
+  .refine((data) => Object.keys(data).length > 0, { message: "No hay campos para actualizar." });
+
+adminRouter.patch("/athletes/:id", requireAdmin, validateBody(editAthleteSchema), async (req, res) => {
   const id = String(req.params.id);
-  const body = req.body as Partial<Record<(typeof EDITABLE_FIELDS)[number], string>>;
+  const body = req.body as z.infer<typeof editAthleteSchema>;
 
   const updates = EDITABLE_FIELDS.filter((field) => body[field] !== undefined);
-  if (updates.length === 0) {
-    res.status(400).json({ error: "No hay campos para actualizar." });
-    return;
-  }
-  if (updates.some((field) => !String(body[field]).trim())) {
-    res.status(400).json({ error: "Ningún campo puede quedar vacío." });
-    return;
-  }
-  if (body.route !== undefined && !ROUTES.includes(body.route as (typeof ROUTES)[number])) {
-    res.status(400).json({ error: "Ruta inválida." });
-    return;
-  }
-  if (body.jerseySize !== undefined && !JERSEY_SIZES.includes(body.jerseySize as (typeof JERSEY_SIZES)[number])) {
-    res.status(400).json({ error: "Talla inválida." });
-    return;
-  }
-  if (body.bloodType !== undefined && !BLOOD_TYPES.includes(body.bloodType as (typeof BLOOD_TYPES)[number])) {
-    res.status(400).json({ error: "Tipo de sangre inválido." });
-    return;
-  }
 
   const setClauses = updates.map((field, i) => `${FIELD_TO_COLUMN[field]} = $${i + 1}`);
   const values = updates.map((field) => body[field]);
@@ -212,30 +227,27 @@ adminRouter.delete("/athletes/:id", requireAdmin, async (req, res) => {
 
 // --- Aprobar / rechazar / registrar abono --------------------------------
 
-interface PaymentActionBody {
-  action: "approve" | "reject" | "add_payment";
-  paymentId?: string;
-  amountBs?: number;
-  bcvRate?: number;
-  reference?: string;
-  bankOrigin?: string;
-}
+const paymentActionSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("approve"), paymentId: z.string().uuid("paymentId inválido.") }),
+  z.object({ action: z.literal("reject"), paymentId: z.string().uuid("paymentId inválido.") }),
+  z.object({
+    action: z.literal("add_payment"),
+    amountBs: z.coerce.number().positive("amountBs inválido.").max(100_000_000),
+    bcvRate: z.coerce.number().positive("bcvRate inválido.").max(1_000_000),
+    reference: z.string().trim().min(1, "Falta la referencia.").max(50),
+    bankOrigin: z.string().trim().max(50).optional(),
+  }),
+]);
 
-adminRouter.patch("/athletes/:id/payment", requireAdmin, async (req, res) => {
+adminRouter.patch("/athletes/:id/payment", requireAdmin, validateBody(paymentActionSchema), async (req, res) => {
   const id = String(req.params.id);
-  const body = req.body as PaymentActionBody;
+  const body = req.body as z.infer<typeof paymentActionSchema>;
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
     if (body.action === "approve" || body.action === "reject") {
-      if (!body.paymentId) {
-        await client.query("ROLLBACK");
-        res.status(400).json({ error: "Falta paymentId." });
-        return;
-      }
-
       const newStatus = body.action === "approve" ? "APPROVED" : "REJECTED";
       const updateRes = await client.query(
         "UPDATE payments SET status = $1 WHERE id = $2 AND athlete_id = $3 RETURNING id",
@@ -246,23 +258,13 @@ adminRouter.patch("/athletes/:id/payment", requireAdmin, async (req, res) => {
         res.status(404).json({ error: "Pago no encontrado." });
         return;
       }
-    } else if (body.action === "add_payment") {
-      if (!body.amountBs || !body.bcvRate || !body.reference) {
-        await client.query("ROLLBACK");
-        res.status(400).json({ error: "Faltan amountBs, bcvRate o reference." });
-        return;
-      }
-
+    } else {
       const amountUsdEquiv = body.amountBs / body.bcvRate;
       await client.query(
         `INSERT INTO payments (athlete_id, amount_bs, amount_usd_equiv, bcv_rate, reference, bank_origin, status)
          VALUES ($1, $2, $3, $4, $5, $6, 'APPROVED')`,
         [id, body.amountBs, amountUsdEquiv, body.bcvRate, body.reference, body.bankOrigin ?? null],
       );
-    } else {
-      await client.query("ROLLBACK");
-      res.status(400).json({ error: "Acción inválida." });
-      return;
     }
 
     const status = await recomputeAthletePaymentStatus(client, id);
@@ -315,12 +317,10 @@ adminRouter.get("/check-in/preview/:qrToken", requireAdmin, async (req, res) => 
   });
 });
 
-adminRouter.post("/check-in", requireAdmin, async (req, res) => {
-  const { qrToken } = req.body as { qrToken?: string };
-  if (!qrToken) {
-    res.status(400).json({ error: "Falta qrToken." });
-    return;
-  }
+const checkInSchema = z.object({ qrToken: z.string().uuid("qrToken inválido.") });
+
+adminRouter.post("/check-in", requireAdmin, validateBody(checkInSchema), async (req, res) => {
+  const { qrToken } = req.body as z.infer<typeof checkInSchema>;
 
   const client = await pool.connect();
   try {

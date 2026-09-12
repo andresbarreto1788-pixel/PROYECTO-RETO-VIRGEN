@@ -22,7 +22,10 @@
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "file-type": "^22.1.0",
     "framer-motion": "^13.2.0",
+    "helmet": "^8.3.0",
     "html-to-image": "^1.11.13",
     "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.3",
@@ -35,7 +38,8 @@
     "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.3",
     "tailwindcss": "^4.3.3",
-    "tesseract.js": "^7.0.0"
+    "tesseract.js": "^7.0.0",
+    "zod": "^4.6.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -6,9 +6,11 @@ import { fileURLToPath } from "node:url";
 import compression from "compression";
 import cors from "cors";
 import express from "express";
+import helmet from "helmet";
 import { MulterError } from "multer";
 import type { ErrorRequestHandler } from "express";
 import { pool } from "./db/pool.js";
+import { globalLimiter } from "./middleware/rateLimit.js";
 import { UPLOADS_DIR } from "./middleware/upload.js";
 import { registerRouter } from "./routes/register.js";
 import { adminRouter } from "./routes/admin.js";
@@ -28,10 +30,55 @@ const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 const ROOT_DIR = process.cwd();
 
+// Railway está detrás de un proxy/balanceador: sin esto, req.ip sería siempre la IP
+// del proxy y el rate limiting agruparía a todos los visitantes como uno solo.
+app.set("trust proxy", 1);
+
+app.disable("x-powered-by");
+app.use(
+  helmet({
+    contentSecurityPolicy: false, // requeriría auditar cada script/worker/blob: del bundle; ver reporte de seguridad
+    frameguard: { action: "deny" },
+    hsts: { maxAge: 31536000, includeSubDomains: true, preload: true },
+  }),
+);
 app.use(compression());
-app.use(cors({ origin: process.env.CORS_ORIGIN ?? "*" }));
+
+const DEFAULT_ALLOWED_ORIGINS = [
+  "https://web-production-0a5c9.up.railway.app",
+  "http://localhost:5173",
+  "http://localhost:4000",
+];
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
+  : DEFAULT_ALLOWED_ORIGINS;
+
+app.use(
+  cors({
+    origin(origin, callback) {
+      // Sin header Origin (curl, apps móviles, same-origin) o en la lista permitida.
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+        return;
+      }
+      callback(new Error("Origen no permitido por política CORS."));
+    },
+  }),
+);
+
+app.use(globalLimiter);
 app.use(express.json());
-app.use("/uploads", express.static(UPLOADS_DIR));
+app.use(
+  "/uploads",
+  express.static(UPLOADS_DIR, {
+    // Los archivos ya están validados por firma de bytes (solo JPEG/PNG/PDF reales),
+    // pero forzamos "inline" y confiamos en X-Content-Type-Options (helmet) como
+    // segunda capa para que el navegador nunca intente ejecutar el contenido servido.
+    setHeaders: (res) => {
+      res.setHeader("Content-Disposition", "inline");
+    },
+  }),
+);
 
 app.use("/api/register", registerRouter);
 app.use("/api/admin", adminRouter);
@@ -66,11 +113,20 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     res.status(400).json({ error: err.message });
     return;
   }
-  if (err instanceof Error) {
-    res.status(400).json({ error: err.message });
+  if (err instanceof Error && err.message === "Origen no permitido por política CORS.") {
+    res.status(403).json({ error: err.message });
     return;
   }
+
   console.error("Error no manejado:", err);
+
+  // En producción nunca reenviamos err.message al cliente: puede ser un mensaje crudo
+  // de Postgres, una ruta de archivo del servidor, etc. Solo en desarrollo ayuda a depurar.
+  if (process.env.NODE_ENV !== "production" && err instanceof Error) {
+    res.status(500).json({ error: err.message });
+    return;
+  }
+
   res.status(500).json({ error: "Error interno del servidor." });
 };
 app.use(errorHandler);

@@ -1,6 +1,9 @@
 import { Router } from "express";
+import { z } from "zod";
 import { pool } from "../db/pool.js";
-import { uploadProof } from "../middleware/upload.js";
+import { persistValidatedProof, uploadProof } from "../middleware/upload.js";
+import { validateBody } from "../middleware/validate.js";
+import { registerLimiter } from "../middleware/rateLimit.js";
 import { serializeAthlete } from "../lib/serialize.js";
 
 export const registerRouter = Router();
@@ -15,100 +18,115 @@ const PAYMENT_METHOD_LABEL: Record<string, string> = {
   efectivo: "Efectivo",
 };
 
-const REQUIRED_FIELDS = [
-  "fullName",
-  "idNumber",
-  "phone",
-  "emergencyContact",
-  "bloodType",
-  "modality",
-  "jerseySize",
-  "paymentMethod",
-  "paymentReference",
-  "paymentPlan",
-  "amountUsd",
-  "bcvRate",
-] as const;
+// idNumber acepta cédula (V-12345678) o pasaporte (formatos alfanuméricos variados),
+// por eso el patrón es permisivo en forma y solo acota longitud/caracteres válidos.
+const idNumberSchema = z
+  .string()
+  .trim()
+  .min(5, "Cédula o pasaporte inválido.")
+  .max(20, "Cédula o pasaporte inválido.")
+  .regex(/^[A-Za-z0-9-]+$/, "Cédula o pasaporte inválido.");
 
-registerRouter.post("/", uploadProof.single("proof"), async (req, res) => {
-  const body = req.body as Record<string, string | undefined>;
+const phoneSchema = z
+  .string()
+  .trim()
+  .min(7, "Teléfono inválido.")
+  .max(20, "Teléfono inválido.")
+  .regex(/^[0-9+()\- ]+$/, "Teléfono inválido.");
 
-  const missing = REQUIRED_FIELDS.filter((field) => !body[field]);
-  if (missing.length > 0) {
-    res.status(400).json({ error: `Faltan campos obligatorios: ${missing.join(", ")}` });
-    return;
-  }
+const registerSchema = z.object({
+  fullName: z.string().trim().min(3, "Nombre inválido.").max(150),
+  idNumber: idNumberSchema,
+  phone: phoneSchema,
+  emergencyContact: z.string().trim().min(3, "Contacto de emergencia inválido.").max(100),
+  bloodType: z.enum(["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"], { message: "Tipo de sangre inválido." }),
+  modality: z.enum(["reto-33k", "reto-22k"], { message: "Modalidad inválida." }),
+  jerseySize: z.enum(["S", "M", "L", "XL", "XXL"], { message: "Talla inválida." }),
+  paymentMethod: z.enum(["pago-movil", "efectivo"], { message: "Método de pago inválido." }),
+  paymentReference: z.string().trim().min(1, "Falta la referencia de pago.").max(50),
+  paymentPlan: z.enum(["full", "partial"], { message: "Plan de pago inválido." }),
+  amountUsd: z.coerce.number().positive("Monto inválido.").max(100_000),
+  bcvRate: z.coerce.number().positive("Tasa BCV inválida.").max(1_000_000),
+  paidAmountBs: z.coerce.number().positive().max(100_000_000).optional(),
+  paidAmountUsd: z.coerce.number().positive().max(100_000).optional(),
+});
 
-  const route = MODALITY_TO_ROUTE[body.modality!];
-  if (!route) {
-    res.status(400).json({ error: "Modalidad inválida." });
-    return;
-  }
+registerRouter.post(
+  "/",
+  registerLimiter,
+  uploadProof.single("proof"),
+  persistValidatedProof,
+  validateBody(registerSchema),
+  async (req, res) => {
+    const body = req.body as z.infer<typeof registerSchema>;
 
-  if (!req.file) {
-    res.status(400).json({ error: "Debes adjuntar el comprobante de pago." });
-    return;
-  }
+    const route = MODALITY_TO_ROUTE[body.modality];
 
-  const amountUsd = Number(body.amountUsd);
-  const bcvRate = Number(body.bcvRate);
-  const paidAmountBs = Number(body.paidAmountBs ?? amountUsd * bcvRate);
-  const paidAmountUsd = Number(body.paidAmountUsd ?? paidAmountBs / bcvRate);
-  const paymentStatus = body.paymentPlan === "partial" ? "PARTIAL" : "PENDING_REVIEW";
-  const proofUrl = `/uploads/${req.file.filename}`;
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-
-    const athleteResult = await client.query(
-      `INSERT INTO athletes
-        (full_name, ci, phone, emergency_contact, blood_type, route, jersey_size, payment_status, total_amount_usd)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING *`,
-      [
-        body.fullName,
-        body.idNumber,
-        body.phone,
-        body.emergencyContact,
-        body.bloodType,
-        route,
-        body.jerseySize,
-        paymentStatus,
-        amountUsd,
-      ],
-    );
-    const athlete = athleteResult.rows[0];
-
-    await client.query(
-      `INSERT INTO payments
-        (athlete_id, amount_bs, amount_usd_equiv, bcv_rate, reference, bank_origin, proof_url, status)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')`,
-      [
-        athlete.id,
-        paidAmountBs,
-        paidAmountUsd,
-        bcvRate,
-        body.paymentReference,
-        PAYMENT_METHOD_LABEL[body.paymentMethod!] ?? body.paymentMethod,
-        proofUrl,
-      ],
-    );
-
-    await client.query("COMMIT");
-
-    res.status(201).json({ athlete: serializeAthlete(athlete), qrToken: athlete.qr_token });
-  } catch (err) {
-    await client.query("ROLLBACK");
-
-    if (err && typeof err === "object" && "code" in err && err.code === "23505") {
-      res.status(409).json({ error: "Ya existe una inscripción con esa cédula." });
+    if (!req.file) {
+      res.status(400).json({ error: "Debes adjuntar el comprobante de pago." });
       return;
     }
 
-    console.error("Error registrando atleta:", err);
-    res.status(500).json({ error: "No se pudo completar la inscripción." });
-  } finally {
-    client.release();
-  }
-});
+    const amountUsd = body.amountUsd;
+    const bcvRate = body.bcvRate;
+    const paidAmountBs = body.paidAmountBs ?? amountUsd * bcvRate;
+    const paidAmountUsd = body.paidAmountUsd ?? paidAmountBs / bcvRate;
+    const paymentStatus = body.paymentPlan === "partial" ? "PARTIAL" : "PENDING_REVIEW";
+    const proofUrl = `/uploads/${req.file.filename}`;
+
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+
+      const athleteResult = await client.query(
+        `INSERT INTO athletes
+          (full_name, ci, phone, emergency_contact, blood_type, route, jersey_size, payment_status, total_amount_usd)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+         RETURNING *`,
+        [
+          body.fullName,
+          body.idNumber,
+          body.phone,
+          body.emergencyContact,
+          body.bloodType,
+          route,
+          body.jerseySize,
+          paymentStatus,
+          amountUsd,
+        ],
+      );
+      const athlete = athleteResult.rows[0];
+
+      await client.query(
+        `INSERT INTO payments
+          (athlete_id, amount_bs, amount_usd_equiv, bcv_rate, reference, bank_origin, proof_url, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')`,
+        [
+          athlete.id,
+          paidAmountBs,
+          paidAmountUsd,
+          bcvRate,
+          body.paymentReference,
+          PAYMENT_METHOD_LABEL[body.paymentMethod] ?? body.paymentMethod,
+          proofUrl,
+        ],
+      );
+
+      await client.query("COMMIT");
+
+      res.status(201).json({ athlete: serializeAthlete(athlete), qrToken: athlete.qr_token });
+    } catch (err) {
+      await client.query("ROLLBACK");
+
+      if (err && typeof err === "object" && "code" in err && err.code === "23505") {
+        res.status(409).json({ error: "Ya existe una inscripción con esa cédula." });
+        return;
+      }
+
+      console.error("Error registrando atleta:", err);
+      res.status(500).json({ error: "No se pudo completar la inscripción." });
+    } finally {
+      client.release();
+    }
+  },
+);
