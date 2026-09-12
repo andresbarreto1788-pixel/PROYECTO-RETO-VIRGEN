@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { mkdirSync } from "node:fs";
 import path from "node:path";
+import compression from "compression";
 import cors from "cors";
 import express from "express";
 import { MulterError } from "multer";
@@ -15,6 +16,7 @@ const app = express();
 const PORT = Number(process.env.PORT) || 4000;
 const ROOT_DIR = process.cwd();
 
+app.use(compression());
 app.use(cors({ origin: process.env.CORS_ORIGIN ?? "*" }));
 app.use(express.json());
 app.use("/uploads", express.static(UPLOADS_DIR));
@@ -26,7 +28,19 @@ app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
 if (process.env.NODE_ENV === "production") {
   const distDir = path.join(ROOT_DIR, "dist");
-  app.use(express.static(distDir));
+  // Los assets de /assets llevan hash en el nombre (Vite), así que pueden cachearse
+  // de forma permanente; el resto (index.html, etc.) no debe cachearse tan agresivo.
+  app.use(
+    express.static(distDir, {
+      immutable: true,
+      maxAge: "1y",
+      setHeaders: (res, filePath) => {
+        if (!filePath.includes(`${path.sep}assets${path.sep}`)) {
+          res.setHeader("Cache-Control", "no-cache");
+        }
+      },
+    }),
+  );
   // Catch-all SPA fallback (Express 5 dropped bare "*" route patterns).
   app.use((_req, res) => res.sendFile(path.join(distDir, "index.html")));
 }
