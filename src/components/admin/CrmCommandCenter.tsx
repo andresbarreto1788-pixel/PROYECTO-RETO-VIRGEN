@@ -1,4 +1,4 @@
-import { Bot, CheckCircle2, FileText, Pause, Play, Receipt, Search, StickyNote } from "lucide-react";
+import { CheckCircle2, FileText, Receipt, Search, StickyNote } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError, adminGet, adminPatch, adminPost } from "../../lib/api";
 import type { Athlete } from "../../types/admin";
@@ -148,7 +148,6 @@ function LinkedAthletePanel({
   const [savingSize, setSavingSize] = useState(false);
   const [approving, setApproving] = useState(false);
   const [resending, setResending] = useState(false);
-  const [togglingBot, setTogglingBot] = useState(false);
   const [notesDraft, setNotesDraft] = useState(conversation.internalNotes ?? "");
   const [savingNotes, setSavingNotes] = useState(false);
 
@@ -221,21 +220,6 @@ function LinkedAthletePanel({
       setError(err instanceof ApiError ? err.message : "No se pudo reenviar el certificado.");
     } finally {
       setResending(false);
-    }
-  }
-
-  async function handleToggleBot() {
-    setTogglingBot(true);
-    setError(null);
-    try {
-      const res = await adminPatch<{ conversation: Conversation }>(`/api/admin/crm/conversations/${conversation.id}`, {
-        botActive: !conversation.botActive,
-      });
-      onConversationPatched(res.conversation);
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : "No se pudo cambiar el estado del bot.");
-    } finally {
-      setTogglingBot(false);
     }
   }
 
@@ -344,16 +328,6 @@ function LinkedAthletePanel({
           className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-neon/15 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-neon disabled:opacity-30"
         >
           <FileText size={12} /> {resending ? "Enviando…" : "Reenviar Certificado PDF + QR"}
-        </button>
-        <button
-          type="button"
-          onClick={handleToggleBot}
-          disabled={togglingBot}
-          className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-blue/15 px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-brand-blue disabled:opacity-50"
-        >
-          {conversation.botActive ? <Pause size={12} /> : <Play size={12} />}
-          {togglingBot ? "Actualizando…" : conversation.botActive ? "Pausar Bot" : "Reanudar Bot"}
-          <Bot size={12} />
         </button>
       </div>
 

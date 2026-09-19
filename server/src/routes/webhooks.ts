@@ -16,6 +16,7 @@ const CERTIFICATE_FILENAME = "Certificado-Reto-Virgen-de-la-Paz.pdf";
 
 interface MetaContact {
   wa_id?: string;
+  profile?: { name?: string };
 }
 
 interface MetaMessage {
@@ -27,13 +28,24 @@ interface MetaMessage {
 // --- Resolución de conversaciones, compartida con whatsappService.ts (Baileys) y
 // certificateDispatch.ts: mismo criterio de vínculo automático por teléfono/correo ---
 
-async function resolveWhatsAppConversation(phone: string, waId: string | null, firstMessage: string): Promise<string> {
+async function resolveWhatsAppConversation(
+  phone: string,
+  waId: string | null,
+  profileName: string | null,
+  firstMessage: string,
+): Promise<string> {
   const existing = await pool.query(
     "SELECT id FROM conversations WHERE contact_identifier = $1 AND channel = 'WHATSAPP' LIMIT 1",
     [phone],
   );
   if (existing.rows.length > 0) {
-    if (waId) await pool.query("UPDATE conversations SET meta_wa_id = $1 WHERE id = $2", [waId, existing.rows[0].id]);
+    // Actualiza wa_id y nombre de perfil en cada mensaje: reflejan el estado actual del
+    // contacto en WhatsApp (Meta los reenvía en cada entrega, no solo la primera vez).
+    await pool.query("UPDATE conversations SET meta_wa_id = COALESCE($1, meta_wa_id), wa_profile_name = COALESCE($2, wa_profile_name) WHERE id = $3", [
+      waId,
+      profileName,
+      existing.rows[0].id,
+    ]);
     return existing.rows[0].id;
   }
 
@@ -48,9 +60,9 @@ async function resolveWhatsAppConversation(phone: string, waId: string | null, f
   const athleteId = athleteMatch.rows[0]?.id ?? null;
 
   const created = await pool.query(
-    `INSERT INTO conversations (athlete_id, channel, contact_identifier, meta_wa_id, last_message)
-     VALUES ($1, 'WHATSAPP', $2, $3, $4) RETURNING id`,
-    [athleteId, phone, waId, firstMessage],
+    `INSERT INTO conversations (athlete_id, channel, contact_identifier, meta_wa_id, wa_profile_name, last_message)
+     VALUES ($1, 'WHATSAPP', $2, $3, $4, $5) RETURNING id`,
+    [athleteId, phone, waId, profileName, firstMessage],
   );
   return created.rows[0].id;
 }
@@ -166,9 +178,11 @@ webhooksRouter.post("/webhooks/whatsapp", async (req, res) => {
         for (const message of messages) {
           if (message.type !== "text" || !message.text?.body || !message.from) continue;
           const from = String(message.from);
-          const waId = contacts.find((c) => c.wa_id)?.wa_id ?? from;
+          const contact = contacts.find((c) => c.wa_id) ?? contacts[0];
+          const waId = contact?.wa_id ?? from;
+          const profileName = contact?.profile?.name?.trim() || null;
 
-          const conversationId = await resolveWhatsAppConversation(from, waId, message.text.body);
+          const conversationId = await resolveWhatsAppConversation(from, waId, profileName, message.text.body);
 
           await runAgentTurn({
             conversationId,

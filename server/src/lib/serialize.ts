@@ -54,6 +54,7 @@ export function serializeConversation(row: Record<string, unknown>) {
     unreadCount: row.unread_count,
     internalNotes: row.internal_notes ?? null,
     metaWaId: row.meta_wa_id ?? null,
+    waProfileName: row.wa_profile_name ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };

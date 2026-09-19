@@ -188,12 +188,12 @@ class WhatsAppService {
       const text = extractMessageText(msg.message);
       if (!text) continue;
 
-      await this.processIncomingText(jidToPhone(jid), text);
+      await this.processIncomingText(jidToPhone(jid), text, msg.pushName?.trim() || null);
     }
   }
 
-  private async processIncomingText(phone: string, text: string): Promise<void> {
-    const conversationId = await this.resolveConversation(phone, text);
+  private async processIncomingText(phone: string, text: string, profileName: string | null): Promise<void> {
+    const conversationId = await this.resolveConversation(phone, text, profileName);
 
     await pool.query(`INSERT INTO crm_messages (conversation_id, sender, message_body) VALUES ($1, 'ATHLETE', $2)`, [
       conversationId,
@@ -269,12 +269,17 @@ class WhatsAppService {
     await this.sendDocument(phone, pdfBuffer, CERTIFICATE_FILENAME);
   }
 
-  private async resolveConversation(phone: string, firstMessage: string): Promise<string> {
+  private async resolveConversation(phone: string, firstMessage: string, profileName: string | null): Promise<string> {
     const existing = await pool.query(
       "SELECT id FROM conversations WHERE contact_identifier = $1 AND channel = 'WHATSAPP' LIMIT 1",
       [phone],
     );
-    if (existing.rows.length > 0) return existing.rows[0].id;
+    if (existing.rows.length > 0) {
+      if (profileName) {
+        await pool.query("UPDATE conversations SET wa_profile_name = $1 WHERE id = $2", [profileName, existing.rows[0].id]);
+      }
+      return existing.rows[0].id;
+    }
 
     // Vincula automáticamente con el atleta si su teléfono registrado coincide. Comparamos
     // solo los últimos 10 dígitos porque el formato local "0412-XXXXXXX" (11 dígitos con
@@ -289,9 +294,9 @@ class WhatsAppService {
     const athleteId = athleteMatch.rows[0]?.id ?? null;
 
     const created = await pool.query(
-      `INSERT INTO conversations (athlete_id, channel, contact_identifier, last_message)
-       VALUES ($1, 'WHATSAPP', $2, $3) RETURNING id`,
-      [athleteId, phone, firstMessage],
+      `INSERT INTO conversations (athlete_id, channel, contact_identifier, wa_profile_name, last_message)
+       VALUES ($1, 'WHATSAPP', $2, $3, $4) RETURNING id`,
+      [athleteId, phone, profileName, firstMessage],
     );
     return created.rows[0].id;
   }

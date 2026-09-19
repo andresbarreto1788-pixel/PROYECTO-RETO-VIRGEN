@@ -91,6 +91,7 @@ export interface Conversation {
   unreadCount: number;
   internalNotes: string | null;
   metaWaId: string | null;
+  waProfileName: string | null;
   createdAt: string;
   updatedAt: string;
 }

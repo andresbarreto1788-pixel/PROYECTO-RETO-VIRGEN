@@ -1,6 +1,6 @@
-import { AlertTriangle, Bot, MessageCircle, Send, Settings, Sparkles, UserCog } from "lucide-react";
+import { AlertTriangle, Bot, MessageCircle, Pause, Play, Send, Settings, Sparkles, Trash2, UserCog } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ApiError, adminGet, adminPost } from "../../lib/api";
+import { ApiError, adminDelete, adminGet, adminPatch, adminPost } from "../../lib/api";
 import type { Conversation, ConversationChannel, CrmMessage, CrmSender, PaymentStatus } from "../../types/admin";
 import { ChannelSettingsModal } from "./ChannelSettingsModal";
 import { CrmCommandCenter } from "./CrmCommandCenter";
@@ -95,7 +95,7 @@ function matchesStatusFilter(c: Conversation, filter: StatusFilter): boolean {
 
 function matchesSearch(c: Conversation, query: string): boolean {
   if (!query) return true;
-  const haystack = [c.athleteFullName, c.athleteCi, c.contactIdentifier, c.athleteEmail]
+  const haystack = [c.athleteFullName, c.waProfileName, c.athleteCi, c.contactIdentifier, c.athleteEmail]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
@@ -118,6 +118,8 @@ export function CrmPanel() {
   const [loadingConversations, setLoadingConversations] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
+  const [togglingBot, setTogglingBot] = useState(false);
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null);
   const [creatingDemo, setCreatingDemo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -209,6 +211,37 @@ export function CrmPanel() {
       setError(err instanceof ApiError ? err.message : "No se pudo crear la conversación de prueba.");
     } finally {
       setCreatingDemo(false);
+    }
+  }
+
+  async function handleToggleBot() {
+    if (!selected) return;
+    setTogglingBot(true);
+    setError(null);
+    try {
+      const res = await adminPatch<{ conversation: Conversation }>(`/api/admin/crm/conversations/${selected.id}`, {
+        botActive: !selected.botActive,
+      });
+      patchSelectedConversation(res.conversation);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo cambiar el estado del bot.");
+    } finally {
+      setTogglingBot(false);
+    }
+  }
+
+  async function handleDeleteMessage(messageId: string) {
+    if (!selected) return;
+    if (!window.confirm("¿Eliminar este mensaje del historial del CRM? Esta acción no se puede deshacer.")) return;
+    setDeletingMessageId(messageId);
+    setError(null);
+    try {
+      await adminDelete(`/api/admin/crm/conversations/${selected.id}/messages/${messageId}`);
+      setMessages((prev) => prev.filter((m) => m.id !== messageId));
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo eliminar el mensaje.");
+    } finally {
+      setDeletingMessageId(null);
     }
   }
 
@@ -325,7 +358,9 @@ export function CrmPanel() {
               }`}
             >
               <div className="flex items-center justify-between gap-2">
-                <span className="truncate text-xs font-bold text-ink">{c.athleteFullName ?? c.contactIdentifier}</span>
+                <span className="truncate text-xs font-bold text-ink">
+                  {c.athleteFullName ?? c.waProfileName ?? c.contactIdentifier}
+                </span>
                 <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-widest ${CHANNEL_STYLES[c.channel]}`}>
                   {CHANNEL_LABELS[c.channel]}
                 </span>
@@ -362,18 +397,62 @@ export function CrmPanel() {
             </div>
           ) : (
             <>
-              <div className="flex items-center justify-between border-b border-brand-card-border px-4 py-3">
-                <div>
-                  <p className="text-xs font-bold text-ink">{selected.athleteFullName ?? selected.contactIdentifier}</p>
-                  <p className="text-[10px] text-ink-muted">{selected.contactIdentifier}</p>
+              <div className="flex items-center justify-between gap-2 border-b border-brand-card-border px-4 py-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5">
+                    <p className="truncate text-xs font-bold text-ink">
+                      {selected.waProfileName ?? selected.athleteFullName ?? selected.contactIdentifier}
+                    </p>
+                    {selected.channel === "WHATSAPP" && (
+                      <span className="shrink-0 rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-widest text-emerald-400">
+                        WhatsApp
+                      </span>
+                    )}
+                  </div>
+                  <p className="truncate text-[10px] text-ink-muted">
+                    {selected.channel === "WHATSAPP" ? (
+                      <>
+                        {selected.contactIdentifier}
+                        {selected.metaWaId && selected.metaWaId !== selected.contactIdentifier
+                          ? ` · ID WhatsApp: ${selected.metaWaId}`
+                          : ""}
+                      </>
+                    ) : (
+                      selected.contactIdentifier
+                    )}
+                  </p>
                 </div>
+                <button
+                  type="button"
+                  onClick={handleToggleBot}
+                  disabled={togglingBot}
+                  className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[9px] font-bold uppercase tracking-widest disabled:opacity-50 ${
+                    selected.botActive ? "bg-brand-blue/15 text-brand-blue" : "bg-yellow-500/15 text-yellow-400"
+                  }`}
+                  title={selected.botActive ? "Pausar el bot y responder como humano" : "Reactivar el bot para este contacto"}
+                >
+                  {selected.botActive ? <Pause size={11} /> : <Play size={11} />}
+                  {togglingBot ? "Actualizando…" : selected.botActive ? "Pausar Bot" : "Reanudar Bot"}
+                  <Bot size={11} />
+                </button>
               </div>
 
               <div className="flex-1 space-y-2 overflow-y-auto p-4">
                 {loadingMessages && messages.length === 0 && <p className="text-xs text-ink-muted">Cargando mensajes…</p>}
                 {messages.map((m) => (
-                  <div key={m.id} className={`max-w-[75%] rounded-2xl px-3 py-2 text-xs ${SENDER_BUBBLE[m.sender]}`}>
-                    <p className="mb-0.5 text-[9px] font-bold uppercase tracking-widest opacity-60">{SENDER_LABELS[m.sender]}</p>
+                  <div key={m.id} className={`group relative max-w-[75%] rounded-2xl px-3 py-2 text-xs ${SENDER_BUBBLE[m.sender]}`}>
+                    <div className="mb-0.5 flex items-center justify-between gap-2">
+                      <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">{SENDER_LABELS[m.sender]}</p>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteMessage(m.id)}
+                        disabled={deletingMessageId === m.id}
+                        title="Eliminar mensaje"
+                        className="opacity-0 transition-opacity hover:text-red-400 disabled:opacity-50 group-hover:opacity-60"
+                      >
+                        <Trash2 size={11} />
+                      </button>
+                    </div>
                     {m.emailSubject && <p className="mb-1 text-[10px] font-semibold italic opacity-80">Asunto: {m.emailSubject}</p>}
                     <p className="whitespace-pre-wrap">{m.messageBody}</p>
                     <p className="mt-1 text-right text-[9px] opacity-50">{formatTime(m.createdAt)}</p>

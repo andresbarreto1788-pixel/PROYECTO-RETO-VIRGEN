@@ -59,6 +59,11 @@ CREATE INDEX IF NOT EXISTS idx_conversations_athlete_id ON conversations(athlete
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS internal_notes TEXT NULL;
 ALTER TABLE conversations ADD COLUMN IF NOT EXISTS meta_wa_id VARCHAR(100) NULL;
 
+-- Nombre de perfil de WhatsApp del contacto (Meta "contacts[].profile.name" o el
+-- "pushName" de Baileys), para que el CRM muestre el mismo nombre que ve el organizador
+-- en la app de WhatsApp, no solo el número.
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS wa_profile_name VARCHAR(150) NULL;
+
 CREATE TABLE IF NOT EXISTS crm_messages (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
