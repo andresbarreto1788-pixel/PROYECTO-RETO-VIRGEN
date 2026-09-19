@@ -62,6 +62,23 @@ function buildEmailHtml(athlete: AthleteCertificateData): string {
 </html>`;
 }
 
+function buildEmailText(athlete: AthleteCertificateData): string {
+  const routeLabel = ROUTE_LABELS[athlete.route] ?? athlete.route;
+  const bibLabel = athlete.bibNumber != null ? String(athlete.bibNumber) : "Se asigna en el check-in";
+
+  return [
+    `Hola ${athlete.fullName},`,
+    "",
+    "Tu inscripción ha sido confirmada con pago completo. Adjunto encontrarás tu certificado oficial de participación con el código QR que debes presentar el día del evento en el paddock para retirar tu kit.",
+    "",
+    `Modalidad: ${routeLabel}`,
+    `Talla de franela: ${athlete.jerseySize}`,
+    `Dorsal: ${bibLabel}`,
+    "",
+    "Presenta el QR de tu certificado (impreso o desde tu celular) en el paddock antes de la salida. ¡Nos vemos en la meta!",
+  ].join("\n");
+}
+
 export interface GmailConfigStatus {
   configured: boolean;
   user: string | null;
@@ -129,8 +146,10 @@ export async function sendOrganizerEmailReply(
 
     await transporter.sendMail({
       from: `"Reto Virgen de la Paz" <${gmailUser}>`,
+      replyTo: gmailUser,
       to: toEmail,
       subject,
+      text: `Hola ${athleteName || "atleta"},\n\n${bodyText}`,
       html: buildReplyHtml(athleteName, bodyText),
     });
 
@@ -163,8 +182,10 @@ export async function sendRegistrationCertificateEmail(
 
     await transporter.sendMail({
       from: `"Reto Virgen de la Paz" <${gmailUser}>`,
+      replyTo: gmailUser,
       to: athlete.email,
       subject: EMAIL_SUBJECT,
+      text: buildEmailText(athlete),
       html: buildEmailHtml(athlete),
       attachments: [
         {
