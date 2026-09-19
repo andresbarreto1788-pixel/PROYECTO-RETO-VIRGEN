@@ -5,7 +5,7 @@ import type { RegistrationData } from "../types/race";
 export function buildRegistrationWhatsAppLink(data: RegistrationData): string {
   const route = ROUTE_MODALITIES.find((m) => m.id === data.modality);
   const modalityLabel = route ? `${route.distanceKm} KM — Salida ${route.startPoint}` : data.modality;
-  const paymentLabel = data.paymentMethod === "pago-movil" ? "Pago Móvil" : "Efectivo";
+  const paymentLabel = data.paymentMethod === "pago-movil" ? "Pago Móvil" : "Transferencia";
 
   const planLabel = data.paymentPlan === "full" ? "Pago Completo (100%)" : "Pago por Cuotas";
 

@@ -40,7 +40,7 @@ export interface Sponsor {
   name: string;
 }
 
-export type PaymentMethod = "pago-movil" | "efectivo";
+export type PaymentMethod = "pago-movil" | "transferencia";
 
 export type PaymentPlan = "full" | "partial";
 

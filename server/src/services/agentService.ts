@@ -42,7 +42,7 @@ DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies):
   (El precio es único: $25 USD para ambas modalidades, 22K y 33K.)
 - Desnivel acumulado aproximado: +1200 m. Puntos de hidratación: Km 8 y Km 20.
 - Kit del atleta: medalla conmemorativa troquelada, dorsal numerado y jersey oficial de finisher manga larga (tallas S, M, L, XL, XXL — diseño con pinos andinos y el logo de la Virgen). El kit se entrega el día del evento en el paddock, presentando el QR del certificado.
-- Pago: Pago Móvil, transferencia/depósito o efectivo. Se puede pagar completo o en plan parcial (mínimo 50% de inicial). Datos para pagar:
+- Pago: Pago Móvil o Transferencia/Depósito. Se puede pagar completo o en plan parcial (mínimo 50% de inicial). Datos para pagar:
   · Pago Móvil — Banco: 0108 (Banco Provincial) · Cédula/RIF: 18924508 · Teléfono: 0414-0746270.
   · Transferencia/Depósito — Banco Provincial · Cuenta: 0108-0377-20-0100049415.
 - Tasa BCV del día: consúltala siempre con la herramienta info_evento, nunca la inventes ni repitas una cifra vieja de memoria.
@@ -155,7 +155,7 @@ async function toolInfoEvento(): Promise<string> {
     hidratacion: ["Km 8 — 1er punto de hidratación", "Km 20 — 2do punto de hidratación"],
     kit: ["Medalla conmemorativa troquelada", "Dorsal numerado", "Jersey oficial de finisher (manga larga, tallas S-XXL)"],
     entregaKit: "El día del evento en el paddock, presentando el QR del certificado.",
-    metodosPago: ["Pago Móvil", "Transferencia/Depósito", "Efectivo"],
+    metodosPago: ["Pago Móvil", "Transferencia/Depósito"],
     datosPago: {
       pagoMovil: { banco: "0108 (Banco Provincial)", cedulaRif: "18924508", telefono: "0414-0746270" },
       transferencia: { banco: "Banco Provincial", cuenta: "0108-0377-20-0100049415" },

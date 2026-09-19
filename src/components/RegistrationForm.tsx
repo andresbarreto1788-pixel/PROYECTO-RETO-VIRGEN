@@ -188,7 +188,7 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
             onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
           >
             <option value="pago-movil">Pago Móvil</option>
-            <option value="efectivo">Efectivo</option>
+            <option value="transferencia">Transferencia</option>
           </select>
         </label>
       </div>

@@ -15,7 +15,7 @@ const MODALITY_TO_ROUTE: Record<string, string> = {
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   "pago-movil": "Pago Móvil",
-  efectivo: "Efectivo",
+  transferencia: "Transferencia",
 };
 
 // idNumber acepta cédula (V-12345678) o pasaporte (formatos alfanuméricos variados),
@@ -45,7 +45,7 @@ const registerSchema = z.object({
   bloodType: z.enum(["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"], { message: "Tipo de sangre inválido." }),
   modality: z.enum(["reto-33k", "reto-22k"], { message: "Modalidad inválida." }),
   jerseySize: z.enum(["S", "M", "L", "XL", "XXL"], { message: "Talla inválida." }),
-  paymentMethod: z.enum(["pago-movil", "efectivo"], { message: "Método de pago inválido." }),
+  paymentMethod: z.enum(["pago-movil", "transferencia"], { message: "Método de pago inválido." }),
   paymentReference: z.string().trim().min(1, "Falta la referencia de pago.").max(50),
   paymentPlan: z.enum(["full", "partial"], { message: "Plan de pago inválido." }),
   amountUsd: z.coerce.number().positive("Monto inválido.").max(100_000),
