@@ -47,7 +47,8 @@ app.use(
 app.use(compression());
 
 const DEFAULT_ALLOWED_ORIGINS = [
-  "https://web-production-0a5c9.up.railway.app",
+  "https://retovirgendelapaz.com",
+  "https://www.retovirgendelapaz.com",
   "http://localhost:5173",
   "http://localhost:4000",
 ];
@@ -55,11 +56,24 @@ const allowedOrigins = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(",").map((origin) => origin.trim())
   : DEFAULT_ALLOWED_ORIGINS;
 
+// Railway asigna un dominio temporal nuevo (*.up.railway.app) cada vez que se
+// recrea el servicio; en vez de hardcodearlo, se permite cualquier subdominio
+// de up.railway.app automáticamente para que los assets nunca queden bloqueados
+// por CORS tras un redeploy.
+function isRailwayTemporaryDomain(origin: string): boolean {
+  try {
+    const { hostname } = new URL(origin);
+    return hostname === "up.railway.app" || hostname.endsWith(".up.railway.app");
+  } catch {
+    return false;
+  }
+}
+
 app.use(
   cors({
     origin(origin, callback) {
       // Sin header Origin (curl, apps móviles, same-origin) o en la lista permitida.
-      if (!origin || allowedOrigins.includes(origin)) {
+      if (!origin || allowedOrigins.includes(origin) || isRailwayTemporaryDomain(origin)) {
         callback(null, true);
         return;
       }
