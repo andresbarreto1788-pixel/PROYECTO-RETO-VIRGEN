@@ -1,0 +1,14 @@
+{
+  "name": "CRM Reto Virgen de la Paz",
+  "short_name": "RVP Admin",
+  "description": "Panel administrativo: atletas, check-in y CRM de WhatsApp/Gmail del Reto Virgen de la Paz.",
+  "start_url": "/admin",
+  "scope": "/admin",
+  "display": "standalone",
+  "background_color": "#0B0D0E",
+  "theme_color": "#0B0D0E",
+  "icons": [
+    { "src": "/admin-icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/admin-icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

@@ -35,6 +35,24 @@ export function AdminDashboard() {
     return () => window.removeEventListener(ADMIN_UNAUTHORIZED_EVENT, handleUnauthorized);
   }, []);
 
+  // Habilita "Instalar app" para el panel: un manifest propio (start_url /admin) y un
+  // service worker mínimo son los dos requisitos del navegador para ofrecer instalarlo
+  // como PWA independiente, separado del sitio público.
+  useEffect(() => {
+    const link = document.createElement("link");
+    link.rel = "manifest";
+    link.href = "/manifest-admin.json";
+    document.head.appendChild(link);
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/admin-sw.js", { scope: "/admin" }).catch(() => {});
+    }
+
+    return () => {
+      document.head.removeChild(link);
+    };
+  }, []);
+
   if (!authed) {
     return <AdminLogin onSuccess={() => setAuthed(true)} />;
   }

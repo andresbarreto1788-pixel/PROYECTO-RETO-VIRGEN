@@ -63,6 +63,19 @@ async function graphFetch(path: string, init: RequestInit): Promise<Response | n
   });
 }
 
+// Número de contacto de los organizadores (Gustavo Briceño) para alertas del sistema —
+// nuevas inscripciones, escalamientos del bot a un humano, etc. Configurable por si el
+// contacto cambia sin necesitar un deploy de código.
+const DEFAULT_ORGANIZER_PHONE = "584140746270";
+
+export function organizerWhatsAppPhone(): string {
+  return process.env.ORGANIZER_WHATSAPP_PHONE || DEFAULT_ORGANIZER_PHONE;
+}
+
+export async function sendOrganizerAlert(text: string): Promise<boolean> {
+  return sendTextMessage(organizerWhatsAppPhone(), text);
+}
+
 export async function sendTextMessage(to: string, text: string): Promise<boolean> {
   const phoneId = phoneNumberId();
   if (!phoneId) return false;

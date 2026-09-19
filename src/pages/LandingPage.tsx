@@ -4,6 +4,7 @@ import { Hero } from "../components/Hero";
 import { RegistrationSection } from "../components/RegistrationSection";
 import { ScrollJourney } from "../components/ScrollJourney";
 import { SponsorsMarquee } from "../components/SponsorsMarquee";
+import { WhatsAppFloatingButton } from "../components/WhatsAppFloatingButton";
 
 export function LandingPage() {
   return (
@@ -16,6 +17,7 @@ export function LandingPage() {
         <RegistrationSection />
       </main>
       <Footer />
+      <WhatsAppFloatingButton />
     </div>
   );
 }

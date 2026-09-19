@@ -3,6 +3,7 @@ import type { ChatCompletionMessageParam, ChatCompletionTool } from "openai/reso
 import { pool } from "../db/pool.js";
 import { dispatchCertificateEmail } from "./certificateDispatch.js";
 import { fetchBcvRate } from "./bcvService.js";
+import * as metaWhatsAppService from "./metaWhatsAppService.js";
 
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const MODEL = process.env.OPENROUTER_MODEL || "qwen/qwen-2.5-72b-instruct";
@@ -35,7 +36,7 @@ const SYSTEM_PROMPT = `Eres el asistente virtual del "Reto Virgen de la Paz", un
 Ayudas a los atletas por WhatsApp/Gmail a consultar su inscripción, reenviar su certificado y resolver dudas del evento.
 
 DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies):
-- 5ta edición — Reto Virgen de la Paz 2027. Fecha: sábado 7 de enero de 2027. Sede: Trujillo, Venezuela.
+- 5ta edición — Reto Virgen de la Paz 2027. Fecha: domingo 17 de enero de 2027. Sede: Trujillo, Venezuela.
 - Modalidades:
   · Reto Completo 33K — Salida: Redoma de Trujillo · Meta: Monumento Virgen de la Paz (46,72 m de altura) · Precio: $25 USD.
   · Reto Medio 22K — Salida: Parque Los Ilustres · Meta: Monumento Virgen de la Paz · Precio: $25 USD.
@@ -47,7 +48,7 @@ DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies):
   · Transferencia/Depósito — Banco Provincial · Cuenta: 0108-0377-20-0100049415.
 - Tasa BCV del día: consúltala siempre con la herramienta info_evento, nunca la inventes ni repitas una cifra vieja de memoria.
 - Certificado: se envía automáticamente por correo (y WhatsApp) apenas el pago queda completo (estatus PAID). Incluye un código QR único por atleta que también sirve para el check-in en el paddock el día del evento.
-- Redes y contacto: Instagram @retovirgendelapaz · WhatsApp del organizador: 0412-6557030.
+- Redes y contacto: Instagram @retovirgendelapaz · WhatsApp del organizador: 0414-0746270 (Gustavo Briceño).
 - Patrocinadores: Galanet, Alcaldía de Trujillo, TODO tv, Soccer Burguer, Tetê, Henry's, Rizo Café, La Protectora Café Gourmet, CTT Turismo.
 
 LÍMITES: no tienes información confirmada sobre edad mínima/máxima, uso obligatorio de casco u otras reglas de seguridad, política de reembolso/cancelación, ni hora límite (cutoff) de la ruta. Si preguntan algo de esto, o cualquier dato que no esté arriba ni puedas consultar con una herramienta, dilo con honestidad ("no tengo ese dato confirmado") y usa escalar_a_humano en vez de adivinar.
@@ -136,7 +137,7 @@ async function toolInfoEvento(): Promise<string> {
   const bcvRate = await fetchBcvRate();
   return JSON.stringify({
     edicion: "5ta edición — Reto Virgen de la Paz 2027",
-    fecha: "Sábado 7 de enero de 2027",
+    fecha: "Domingo 17 de enero de 2027",
     sede: "Trujillo, Venezuela",
     modalidades: [
       {
@@ -164,7 +165,7 @@ async function toolInfoEvento(): Promise<string> {
     paddock: "Entrega de kit y zona de arranque junto al punto de salida de cada modalidad.",
     tasaBcvHoy: bcvRate,
     instagram: "@retovirgendelapaz",
-    whatsappOrganizador: "0412-6557030",
+    whatsappOrganizador: "0414-0746270 (Gustavo Briceño)",
     patrocinadores: [
       "Galanet",
       "Alcaldía de Trujillo",
@@ -208,6 +209,20 @@ async function toolReenviarCertificado(ci: string): Promise<string> {
 
 async function toolEscalarAHumano(conversationId: string): Promise<string> {
   await pool.query("UPDATE conversations SET bot_active = false, updated_at = NOW() WHERE id = $1", [conversationId]);
+
+  const convRes = await pool.query(
+    `SELECT c.channel, c.contact_identifier, a.full_name AS athlete_full_name
+     FROM conversations c LEFT JOIN athletes a ON a.id = c.athlete_id WHERE c.id = $1`,
+    [conversationId],
+  );
+  const conv = convRes.rows[0];
+  if (conv) {
+    const who = conv.athlete_full_name ?? conv.contact_identifier;
+    await metaWhatsAppService.sendOrganizerAlert(
+      `⚠️ Reto Virgen de la Paz: ${who} pidió hablar con un organizador (canal ${conv.channel}). Revisa el CRM.`,
+    );
+  }
+
   return "Conversación transferida a un organizador humano. El bot queda en pausa.";
 }
 

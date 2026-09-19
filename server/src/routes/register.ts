@@ -5,12 +5,18 @@ import { persistValidatedProof, uploadProof } from "../middleware/upload.js";
 import { validateBody } from "../middleware/validate.js";
 import { registerLimiter } from "../middleware/rateLimit.js";
 import { serializeAthlete } from "../lib/serialize.js";
+import * as metaWhatsAppService from "../services/metaWhatsAppService.js";
 
 export const registerRouter = Router();
 
 const MODALITY_TO_ROUTE: Record<string, string> = {
   "reto-33k": "33K_REDOMA",
   "reto-22k": "22K_ILUSTRES",
+};
+
+const ROUTE_LABELS: Record<string, string> = {
+  "33K_REDOMA": "33K · Redoma",
+  "22K_ILUSTRES": "22K · Ilustres",
 };
 
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
@@ -119,6 +125,12 @@ registerRouter.post(
       await client.query("COMMIT");
 
       res.status(201).json({ athlete: serializeAthlete(athlete), qrToken: athlete.qr_token });
+
+      // Alerta al organizador — no bloquea la respuesta al atleta si Meta tarda o falla.
+      metaWhatsAppService.sendOrganizerAlert(
+        `🆕 Nueva inscripción: ${athlete.full_name} · ${ROUTE_LABELS[route] ?? route} · $${amountUsd} · ` +
+          `${PAYMENT_METHOD_LABEL[body.paymentMethod] ?? body.paymentMethod} (${paymentStatus})`,
+      );
     } catch (err) {
       await client.query("ROLLBACK");
 

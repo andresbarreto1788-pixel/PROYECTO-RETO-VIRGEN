@@ -8,8 +8,8 @@ export const EVENT = {
   elevationGainM: 1200,
   summitHeightM: 46.72,
   instagram: "@retovirgendelapaz",
-  whatsapp: "+584126557030",
-  whatsappDigits: "584126557030",
+  whatsapp: "+58 414-0746270",
+  whatsappDigits: "584140746270",
 };
 
 export const HUD_STATS = [
