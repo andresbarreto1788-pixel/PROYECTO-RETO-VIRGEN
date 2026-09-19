@@ -11,6 +11,14 @@ const MAX_TOOL_ROUNDS = 4;
 const client = new OpenAI({
   baseURL: "https://openrouter.ai/api/v1",
   apiKey: OPENROUTER_API_KEY || "mock",
+  // Sin esto, una conexión saliente colgada (red del contenedor, keep-alive raro, etc.)
+  // deja la petición del atleta esperando indefinidamente en vez de caer al modo mock —
+  // el catch de processAgentMessage nunca se dispara porque la promesa nunca se resuelve
+  // ni se rechaza. Con timeout + 1 reintento, cada llamada falla rápido y predecible;
+  // combinado con MAX_TOOL_ROUNDS (que ya acota el número de vueltas del bucle), el
+  // tiempo total en el peor caso queda acotado en vez de indefinido.
+  timeout: 25_000,
+  maxRetries: 1,
 });
 
 const ROUTE_LABELS: Record<string, string> = {
