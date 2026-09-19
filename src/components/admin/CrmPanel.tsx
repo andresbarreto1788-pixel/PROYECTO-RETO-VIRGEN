@@ -1,4 +1,4 @@
-import { AlertTriangle, Bot, MessageCircle, Pause, Play, Send, Settings, Sparkles, Trash2, UserCog } from "lucide-react";
+import { AlertTriangle, ArrowDown, Bot, MessageCircle, Pause, Play, Send, Settings, Sparkles, Trash2, UserCog } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, adminDelete, adminGet, adminPatch, adminPost } from "../../lib/api";
 import type { Conversation, ConversationChannel, CrmMessage, CrmSender, PaymentStatus } from "../../types/admin";
@@ -127,6 +127,7 @@ export function CrmPanel() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("ALL");
   const [channelFilter, setChannelFilter] = useState<ChannelFilter>("ALL");
+  const [isPinnedToBottom, setIsPinnedToBottom] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const selected = conversations.find((c) => c.id === selectedId) ?? null;
@@ -181,13 +182,25 @@ export function CrmPanel() {
   }, [selectedId, loadMessages]);
 
   useEffect(() => {
+    if (isPinnedToBottom) messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isPinnedToBottom]);
+
+  function handleMessagesScroll(e: React.UIEvent<HTMLDivElement>) {
+    const el = e.currentTarget;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+    setIsPinnedToBottom(distanceFromBottom < 80);
+  }
+
+  function scrollToLatest() {
+    setIsPinnedToBottom(true);
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }
 
   function handleSelect(id: string) {
     setError(null);
     setNotice(null);
     setSelectedId(id);
+    setIsPinnedToBottom(true);
   }
 
   function patchSelectedConversation(patch: Partial<Conversation>) {
@@ -206,6 +219,7 @@ export function CrmPanel() {
       );
       await loadConversations();
       setSelectedId(res.conversation.id);
+      setIsPinnedToBottom(true);
       setMessages([res.inboundMessage, ...(res.outboundMessage ? [res.outboundMessage] : [])]);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "No se pudo crear la conversación de prueba.");
@@ -250,6 +264,7 @@ export function CrmPanel() {
     const text = draft.trim();
     setSending(true);
     setError(null);
+    setIsPinnedToBottom(true);
     try {
       if (selected.channel === "SIMULATOR") {
         const res = await adminPost<{ conversation: Conversation; inboundMessage: CrmMessage; outboundMessage: CrmMessage | null }>(
@@ -437,28 +452,41 @@ export function CrmPanel() {
                 </button>
               </div>
 
-              <div className="flex-1 space-y-2 overflow-y-auto p-4">
-                {loadingMessages && messages.length === 0 && <p className="text-xs text-ink-muted">Cargando mensajes…</p>}
-                {messages.map((m) => (
-                  <div key={m.id} className={`group relative max-w-[75%] rounded-2xl px-3 py-2 text-xs ${SENDER_BUBBLE[m.sender]}`}>
-                    <div className="mb-0.5 flex items-center justify-between gap-2">
-                      <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">{SENDER_LABELS[m.sender]}</p>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteMessage(m.id)}
-                        disabled={deletingMessageId === m.id}
-                        title="Eliminar mensaje"
-                        className="opacity-0 transition-opacity hover:text-red-400 disabled:opacity-50 group-hover:opacity-60"
-                      >
-                        <Trash2 size={11} />
-                      </button>
+              <div className="relative min-h-0 flex-1">
+                <div onScroll={handleMessagesScroll} className="h-full space-y-2 overflow-y-auto p-4">
+                  {loadingMessages && messages.length === 0 && <p className="text-xs text-ink-muted">Cargando mensajes…</p>}
+                  {messages.map((m) => (
+                    <div key={m.id} className={`group relative max-w-[75%] rounded-2xl px-3 py-2 text-xs ${SENDER_BUBBLE[m.sender]}`}>
+                      <div className="mb-0.5 flex items-center justify-between gap-2">
+                        <p className="text-[9px] font-bold uppercase tracking-widest opacity-60">{SENDER_LABELS[m.sender]}</p>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteMessage(m.id)}
+                          disabled={deletingMessageId === m.id}
+                          title="Eliminar mensaje"
+                          className="opacity-0 transition-opacity hover:text-red-400 disabled:opacity-50 group-hover:opacity-60"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                      {m.emailSubject && <p className="mb-1 text-[10px] font-semibold italic opacity-80">Asunto: {m.emailSubject}</p>}
+                      <p className="whitespace-pre-wrap">{m.messageBody}</p>
+                      <p className="mt-1 text-right text-[9px] opacity-50">{formatTime(m.createdAt)}</p>
                     </div>
-                    {m.emailSubject && <p className="mb-1 text-[10px] font-semibold italic opacity-80">Asunto: {m.emailSubject}</p>}
-                    <p className="whitespace-pre-wrap">{m.messageBody}</p>
-                    <p className="mt-1 text-right text-[9px] opacity-50">{formatTime(m.createdAt)}</p>
-                  </div>
-                ))}
-                <div ref={messagesEndRef} />
+                  ))}
+                  <div ref={messagesEndRef} />
+                </div>
+
+                {!isPinnedToBottom && (
+                  <button
+                    type="button"
+                    onClick={scrollToLatest}
+                    title="Ir a la conversación en tiempo real"
+                    className="absolute bottom-3 right-3 inline-flex items-center gap-1.5 rounded-full bg-brand-neon px-3 py-2 text-[10px] font-extrabold uppercase tracking-widest text-surface shadow-lg"
+                  >
+                    <ArrowDown size={13} /> En vivo
+                  </button>
+                )}
               </div>
 
               <div className="border-t border-brand-card-border p-3">
