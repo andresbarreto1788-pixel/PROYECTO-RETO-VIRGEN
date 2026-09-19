@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 
@@ -5,6 +7,43 @@ const BACKGROUND_COLOR = "#0F172A";
 const ACCENT_COLOR = "#CCFF00";
 const TEXT_COLOR = "#F8FAFC";
 const MUTED_COLOR = "#94A3B8";
+
+// Mismo isotipo que usa el sitio (Header.tsx, ProofCard.tsx), servido desde /public —
+// vive fuera de dist-server, así que se resuelve relativo al cwd del proceso (igual
+// que ROOT_DIR en index.ts), no relativo a este módulo compilado.
+const LOGO_PATH = path.join(process.cwd(), "public/images/isotipo-monumento.jpeg");
+
+// Fondo temático (ciclista + silueta del monumento) generado con Nano Banana Pro a
+// partir del sello oficial y el isotipo del evento — mismo criterio de resolución que
+// LOGO_PATH (relativo al cwd, no al módulo compilado en dist-server).
+const BACKGROUND_IMAGE_PATH = path.join(process.cwd(), "public/images/certificado-fondo.jpg");
+
+let logoBuffer: Buffer | null | undefined;
+let backgroundImageBuffer: Buffer | null | undefined;
+
+function getLogoBuffer(): Buffer | null {
+  if (logoBuffer === undefined) {
+    try {
+      logoBuffer = readFileSync(LOGO_PATH);
+    } catch {
+      // Si el asset no está disponible (p. ej. un checkout parcial), el certificado
+      // se sigue generando sin logo en vez de fallar el envío del correo/WhatsApp.
+      logoBuffer = null;
+    }
+  }
+  return logoBuffer;
+}
+
+function getBackgroundImageBuffer(): Buffer | null {
+  if (backgroundImageBuffer === undefined) {
+    try {
+      backgroundImageBuffer = readFileSync(BACKGROUND_IMAGE_PATH);
+    } catch {
+      backgroundImageBuffer = null;
+    }
+  }
+  return backgroundImageBuffer;
+}
 
 const ROUTE_LABELS: Record<string, string> = {
   "33K_REDOMA": "33K · Redoma",
@@ -44,13 +83,43 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
 
     const { width, height } = doc.page;
 
-    doc.rect(0, 0, width, height).fill(BACKGROUND_COLOR);
+    const backgroundImage = getBackgroundImageBuffer();
+    if (backgroundImage) {
+      doc.image(backgroundImage, 0, 0, { cover: [width, height] });
+    } else {
+      doc.rect(0, 0, width, height).fill(BACKGROUND_COLOR);
+    }
 
     doc
       .lineWidth(2)
       .strokeColor(ACCENT_COLOR)
       .rect(24, 24, width - 48, height - 48)
       .stroke();
+
+    // El fondo ilustrado pone contenido con mucho contraste propio (la Virgen, picos
+    // claros) justo detrás del bloque de título/nombre — un panel oscuro semitransparente
+    // detrás garantiza que el texto siga legible sin importar qué haya en esa zona de la
+    // imagen. Se dibuja antes que el logo para que el logo quede encima, nítido.
+    if (backgroundImage) {
+      doc.fillOpacity(0.55);
+      doc.roundedRect(40, 40, width - 80, 250, 14).fill(BACKGROUND_COLOR);
+      doc.fillOpacity(1);
+    }
+
+    const logo = getLogoBuffer();
+    if (logo) {
+      const logoCenterX = 74;
+      const logoCenterY = 66;
+      const logoRadius = 32;
+      doc.save();
+      doc.circle(logoCenterX, logoCenterY, logoRadius).clip();
+      doc.image(logo, logoCenterX - logoRadius, logoCenterY - logoRadius, {
+        width: logoRadius * 2,
+        height: logoRadius * 2,
+      });
+      doc.restore();
+      doc.lineWidth(1.5).strokeColor(ACCENT_COLOR).circle(logoCenterX, logoCenterY, logoRadius).stroke();
+    }
 
     doc
       .fillColor(ACCENT_COLOR)
@@ -105,8 +174,20 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
     const qrSize = 110;
     const qrX = width - qrSize - 60;
     const qrY = height - qrSize - 70;
+    const qrPad = 10;
+
+    // Con el fondo ilustrado, el área bajo el QR puede tener cualquier combinación de
+    // tonos (camino neón, ladera oscura, etc.) — una placa sólida detrás garantiza el
+    // contraste dark/light del QR sin importar qué haya debajo, para que siga
+    // escaneando de forma confiable en el paddock.
+    doc
+      .roundedRect(qrX - qrPad, qrY - qrPad, qrSize + qrPad * 2, qrSize + qrPad * 2, 10)
+      .fill(BACKGROUND_COLOR);
     doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
 
+    doc
+      .roundedRect(qrX - 30, qrY + qrSize + 6, qrSize + 60, 26, 6)
+      .fill("#0B0D0E");
     doc
       .fillColor(MUTED_COLOR)
       .font("Helvetica")
