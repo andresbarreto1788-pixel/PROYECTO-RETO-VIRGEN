@@ -87,3 +87,16 @@ export async function adminDownloadExport(): Promise<void> {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+export async function adminDownloadCertificate(athleteId: string, ci: string): Promise<void> {
+  const res = await fetch(`${API_BASE}/api/admin/athletes/${athleteId}/certificate`, { headers: authHeaders() });
+  if (!res.ok) throw new ApiError(`No se pudo descargar el certificado (HTTP ${res.status}).`);
+
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `Certificado-${ci}.pdf`;
+  link.click();
+  URL.revokeObjectURL(url);
+}

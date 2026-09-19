@@ -1,14 +1,15 @@
-import { LogOut, QrCode, Users } from "lucide-react";
+import { LogOut, MessageCircle, QrCode, Users } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { EVENT } from "../data/raceData";
 import { ADMIN_UNAUTHORIZED_EVENT, adminGet, clearAdminToken, getAdminToken } from "../lib/api";
 import { AdminLogin } from "../components/admin/AdminLogin";
 import { AthleteTable } from "../components/admin/AthleteTable";
+import { CrmPanel } from "../components/admin/CrmPanel";
 import { MetricsHud } from "../components/admin/MetricsHud";
 import { QrScannerPanel } from "../components/admin/QrScannerPanel";
 import type { AdminMetrics } from "../types/admin";
 
-type Tab = "athletes" | "scanner";
+type Tab = "athletes" | "scanner" | "crm";
 
 export function AdminDashboard() {
   const [authed, setAuthed] = useState(() => Boolean(getAdminToken()));
@@ -83,9 +84,20 @@ export function AdminDashboard() {
           >
             <QrCode size={14} /> Escáner Paddock
           </button>
+          <button
+            type="button"
+            onClick={() => setTab("crm")}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
+              tab === "crm" ? "bg-brand-neon text-surface" : "border border-brand-card-border text-ink-muted"
+            }`}
+          >
+            <MessageCircle size={14} /> WhatsApp & CRM
+          </button>
         </div>
 
-        {tab === "athletes" ? <AthleteTable onMutated={loadMetrics} /> : <QrScannerPanel onCheckedIn={loadMetrics} />}
+        {tab === "athletes" && <AthleteTable onMutated={loadMetrics} />}
+        {tab === "scanner" && <QrScannerPanel onCheckedIn={loadMetrics} />}
+        {tab === "crm" && <CrmPanel />}
       </div>
     </div>
   );

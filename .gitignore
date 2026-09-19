@@ -20,9 +20,14 @@ server/uploads/*
 .env
 server/.env
 
+# Credenciales de sesión de WhatsApp (Baileys) — vinculan el número real del organizador,
+# nunca deben subirse al repositorio.
+server/sessions/
+
 # Claude Code local tool cache
 .agents/
 .claude/
+scratchpad/
 
 # Editor directories and files
 .vscode/*

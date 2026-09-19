@@ -14,6 +14,8 @@ import { globalLimiter } from "./middleware/rateLimit.js";
 import { UPLOADS_DIR } from "./middleware/upload.js";
 import { registerRouter } from "./routes/register.js";
 import { adminRouter } from "./routes/admin.js";
+import { crmRouter } from "./routes/crm.js";
+import { webhooksRouter } from "./routes/webhooks.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -67,7 +69,16 @@ app.use(
 );
 
 app.use(globalLimiter);
-app.use(express.json());
+app.use(
+  express.json({
+    // Conserva el body crudo para poder validar la firma X-Hub-Signature-256 de Meta
+    // en el webhook de WhatsApp (metaWhatsAppService.verifySignature necesita los
+    // bytes exactos recibidos, no el objeto ya parseado).
+    verify: (req, _res, buf) => {
+      (req as typeof req & { rawBody?: Buffer }).rawBody = buf;
+    },
+  }),
+);
 app.use(
   "/uploads",
   express.static(UPLOADS_DIR, {
@@ -82,6 +93,8 @@ app.use(
 
 app.use("/api/register", registerRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/admin/crm", crmRouter);
+app.use("/api", webhooksRouter);
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 

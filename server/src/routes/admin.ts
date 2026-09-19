@@ -1,11 +1,13 @@
 import { Router } from "express";
-import type { PoolClient } from "pg";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
 import { requireAdmin, safeCompare, signAdminToken } from "../middleware/auth.js";
 import { loginLimiter } from "../middleware/rateLimit.js";
 import { validateBody } from "../middleware/validate.js";
 import { serializeAthlete } from "../lib/serialize.js";
+import { generateCertificatePdf } from "../services/certificateService.js";
+import { dispatchCertificateEmail } from "../services/certificateDispatch.js";
+import { recomputeAthletePaymentStatus } from "../services/paymentService.js";
 
 export const adminRouter = Router();
 
@@ -30,34 +32,6 @@ const phoneSchema = z
 function csvEscape(value: unknown): string {
   const str = String(value ?? "");
   return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
-}
-
-async function recomputeAthletePaymentStatus(client: PoolClient, athleteId: string): Promise<string | null> {
-  const totalRes = await client.query("SELECT total_amount_usd FROM athletes WHERE id = $1", [athleteId]);
-  if (totalRes.rows.length === 0) return null;
-  const total = Number(totalRes.rows[0].total_amount_usd);
-
-  const sumRes = await client.query(
-    "SELECT COALESCE(SUM(amount_usd_equiv), 0) AS paid FROM payments WHERE athlete_id = $1 AND status = 'APPROVED'",
-    [athleteId],
-  );
-  const paid = Number(sumRes.rows[0].paid);
-
-  let status: string;
-  if (total > 0 && paid >= total) {
-    status = "PAID";
-  } else if (paid > 0) {
-    status = "PARTIAL";
-  } else {
-    const pendingRes = await client.query(
-      "SELECT 1 FROM payments WHERE athlete_id = $1 AND status = 'PENDING' LIMIT 1",
-      [athleteId],
-    );
-    status = pendingRes.rows.length > 0 ? "PENDING_REVIEW" : "REJECTED";
-  }
-
-  await client.query("UPDATE athletes SET payment_status = $1 WHERE id = $2", [status, athleteId]);
-  return status;
 }
 
 // --- Auth -------------------------------------------------------------
@@ -107,6 +81,21 @@ adminRouter.get("/metrics", requireAdmin, async (_req, res) => {
 
 // --- Listado de atletas -------------------------------------------------
 
+const ATHLETE_WITH_PAYMENTS_SELECT = `
+  SELECT a.*,
+      COALESCE(paid.paid_usd, 0) AS paid_amount_usd,
+      COALESCE(pays.payments, '[]') AS payments
+   FROM athletes a
+   LEFT JOIN (
+     SELECT athlete_id, SUM(amount_usd_equiv) AS paid_usd
+     FROM payments WHERE status = 'APPROVED' GROUP BY athlete_id
+   ) paid ON paid.athlete_id = a.id
+   LEFT JOIN (
+     SELECT athlete_id, json_agg(p.* ORDER BY p.created_at DESC) AS payments
+     FROM payments p GROUP BY athlete_id
+   ) pays ON pays.athlete_id = a.id
+`;
+
 adminRouter.get("/athletes", requireAdmin, async (req, res) => {
   const page = Math.max(1, Number(req.query.page) || 1);
   const pageSize = Math.min(100, Math.max(1, Number(req.query.pageSize) || 20));
@@ -127,6 +116,11 @@ adminRouter.get("/athletes", requireAdmin, async (req, res) => {
     params.push(req.query.checkedIn === "true");
     conditions.push(`a.checked_in = $${params.length}`);
   }
+  if (typeof req.query.q === "string" && req.query.q.trim()) {
+    params.push(`%${req.query.q.trim()}%`);
+    const i = params.length;
+    conditions.push(`(a.full_name ILIKE $${i} OR a.ci ILIKE $${i} OR a.phone ILIKE $${i} OR a.email ILIKE $${i})`);
+  }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(" AND ")}` : "";
 
@@ -134,18 +128,7 @@ adminRouter.get("/athletes", requireAdmin, async (req, res) => {
 
   const listParams = [...params, pageSize, offset];
   const itemsRes = await pool.query(
-    `SELECT a.*,
-        COALESCE(paid.paid_usd, 0) AS paid_amount_usd,
-        COALESCE(pays.payments, '[]') AS payments
-     FROM athletes a
-     LEFT JOIN (
-       SELECT athlete_id, SUM(amount_usd_equiv) AS paid_usd
-       FROM payments WHERE status = 'APPROVED' GROUP BY athlete_id
-     ) paid ON paid.athlete_id = a.id
-     LEFT JOIN (
-       SELECT athlete_id, json_agg(p.* ORDER BY p.created_at DESC) AS payments
-       FROM payments p GROUP BY athlete_id
-     ) pays ON pays.athlete_id = a.id
+    `${ATHLETE_WITH_PAYMENTS_SELECT}
      ${whereClause}
      ORDER BY a.created_at DESC
      LIMIT $${listParams.length - 1} OFFSET $${listParams.length}`,
@@ -158,6 +141,18 @@ adminRouter.get("/athletes", requireAdmin, async (req, res) => {
     page,
     pageSize,
   });
+});
+
+// Ficha completa de un atleta (incluye historial de pagos con proofUrl) — usada por el
+// Centro de Mando del CRM al vincular o seleccionar una conversación.
+adminRouter.get("/athletes/:id", requireAdmin, async (req, res) => {
+  const id = String(req.params.id);
+  const { rows } = await pool.query(`${ATHLETE_WITH_PAYMENTS_SELECT} WHERE a.id = $1`, [id]);
+  if (rows.length === 0) {
+    res.status(404).json({ error: "Atleta no encontrado." });
+    return;
+  }
+  res.json({ athlete: serializeAthlete(rows[0]) });
 });
 
 // --- Editar / eliminar atleta ---------------------------------------------
@@ -247,6 +242,14 @@ adminRouter.patch("/athletes/:id/payment", requireAdmin, validateBody(paymentAct
   try {
     await client.query("BEGIN");
 
+    const beforeRes = await client.query("SELECT payment_status FROM athletes WHERE id = $1", [id]);
+    if (beforeRes.rows.length === 0) {
+      await client.query("ROLLBACK");
+      res.status(404).json({ error: "Atleta no encontrado." });
+      return;
+    }
+    const previousPaymentStatus = beforeRes.rows[0].payment_status;
+
     if (body.action === "approve" || body.action === "reject") {
       const newStatus = body.action === "approve" ? "APPROVED" : "REJECTED";
       const updateRes = await client.query(
@@ -276,7 +279,21 @@ adminRouter.patch("/athletes/:id/payment", requireAdmin, validateBody(paymentAct
 
     const athleteRes = await client.query("SELECT * FROM athletes WHERE id = $1", [id]);
     await client.query("COMMIT");
-    res.json({ athlete: serializeAthlete(athleteRes.rows[0]) });
+    const athlete = athleteRes.rows[0];
+    res.json({ athlete: serializeAthlete(athlete) });
+
+    if (previousPaymentStatus !== "PAID" && status === "PAID" && athlete.email) {
+      dispatchCertificateEmail({
+        athleteId: athlete.id,
+        fullName: athlete.full_name,
+        ci: athlete.ci,
+        route: athlete.route,
+        jerseySize: athlete.jersey_size,
+        bibNumber: athlete.bib_number,
+        qrToken: athlete.qr_token,
+        email: athlete.email,
+      }).catch((err) => console.error("Error despachando certificado por correo:", err));
+    }
   } catch (err) {
     await client.query("ROLLBACK");
     console.error("Error actualizando pago:", err);
@@ -362,8 +379,14 @@ adminRouter.post("/check-in", requireAdmin, validateBody(checkInSchema), async (
       return;
     }
 
-    const bibRes = await client.query("SELECT nextval('bib_number_seq') AS bib");
-    const bibNumber = bibRes.rows[0].bib;
+    // El dorsal puede haber sido asignado antes desde el CRM ("Aprobar Pago Completo");
+    // solo se genera uno nuevo aquí si el atleta todavía no tiene, para no pisar el
+    // que ya se le comunicó por certificado.
+    let bibNumber = athlete.bib_number;
+    if (bibNumber == null) {
+      const bibRes = await client.query("SELECT nextval('bib_number_seq') AS bib");
+      bibNumber = bibRes.rows[0].bib;
+    }
 
     await client.query(
       "UPDATE athletes SET bib_number = $1, checked_in = true, checked_in_at = NOW() WHERE id = $2",
@@ -385,6 +408,34 @@ adminRouter.post("/check-in", requireAdmin, validateBody(checkInSchema), async (
   } finally {
     client.release();
   }
+});
+
+// --- Certificado PDF -------------------------------------------------------
+
+adminRouter.get("/athletes/:id/certificate", requireAdmin, async (req, res) => {
+  const id = String(req.params.id);
+
+  const athleteRes = await pool.query("SELECT * FROM athletes WHERE id = $1", [id]);
+  if (athleteRes.rows.length === 0) {
+    res.status(404).json({ error: "Atleta no encontrado." });
+    return;
+  }
+  const athlete = athleteRes.rows[0];
+
+  const pdfBuffer = await generateCertificatePdf({
+    athleteId: athlete.id,
+    fullName: athlete.full_name,
+    ci: athlete.ci,
+    route: athlete.route,
+    jerseySize: athlete.jersey_size,
+    bibNumber: athlete.bib_number,
+    qrToken: athlete.qr_token,
+    email: athlete.email ?? "",
+  });
+
+  res.setHeader("Content-Type", "application/pdf");
+  res.setHeader("Content-Disposition", `inline; filename="certificado-${athlete.ci}.pdf"`);
+  res.send(pdfBuffer);
 });
 
 // --- Exportación CSV -------------------------------------------------------

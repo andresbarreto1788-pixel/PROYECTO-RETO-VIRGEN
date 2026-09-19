@@ -24,6 +24,7 @@ export interface Athlete {
   fullName: string;
   ci: string;
   phone: string;
+  email: string | null;
   emergencyContact: string;
   bloodType: BloodType;
   route: AthleteRoute;
@@ -67,4 +68,53 @@ export interface CheckInPreview {
   checkedIn: boolean;
   bibNumber: number | null;
   owedUsd: number;
+}
+
+export type ConversationChannel = "WHATSAPP" | "GMAIL" | "SIMULATOR";
+
+export type CrmSender = "ATHLETE" | "BOT" | "ORGANIZER";
+
+export interface Conversation {
+  id: string;
+  athleteId: string | null;
+  athleteFullName: string | null;
+  athleteCi: string | null;
+  athleteRoute: AthleteRoute | null;
+  athleteJerseySize: JerseySize | null;
+  athletePaymentStatus: PaymentStatus | null;
+  athleteBibNumber: number | null;
+  athleteEmail: string | null;
+  channel: ConversationChannel;
+  contactIdentifier: string;
+  lastMessage: string | null;
+  botActive: boolean;
+  unreadCount: number;
+  internalNotes: string | null;
+  metaWaId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CrmMessage {
+  id: string;
+  conversationId: string;
+  sender: CrmSender;
+  messageBody: string;
+  attachmentUrl: string | null;
+  emailSubject: string | null;
+  createdAt: string;
+}
+
+export type WhatsAppConnectionStatus = "DISCONNECTED" | "CONNECTING" | "QR_READY" | "CONNECTED";
+
+export interface WhatsAppStatus {
+  status: WhatsAppConnectionStatus;
+  qrCodeDataUrl: string | null;
+  connectedPhone: string | null;
+}
+
+export interface ChannelsStatus {
+  gmail: { configured: boolean; user: string | null; mode: "MOCK" | "PRODUCTION" };
+  meta: { configured: boolean; phoneNumberId: string | null; verifyTokenSet: boolean };
+  webhookUrl: string;
 }

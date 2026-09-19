@@ -18,6 +18,10 @@ CREATE TABLE IF NOT EXISTS athletes (
   created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- CREATE TABLE IF NOT EXISTS no altera tablas ya existentes, así que el nuevo
+-- campo de un despliegue previo se agrega aparte con ADD COLUMN IF NOT EXISTS.
+ALTER TABLE athletes ADD COLUMN IF NOT EXISTS email VARCHAR(150) NULL;
+
 CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   athlete_id UUID REFERENCES athletes(id) ON DELETE CASCADE,
@@ -36,3 +40,35 @@ CREATE INDEX IF NOT EXISTS idx_payments_athlete_id ON payments(athlete_id);
 -- Asignación de dorsales libre de condiciones de carrera: nextval() es atómico
 -- incluso bajo escaneos concurrentes en el paddock, a diferencia de MAX(bib_number)+1.
 CREATE SEQUENCE IF NOT EXISTS bib_number_seq START 1;
+
+CREATE TABLE IF NOT EXISTS conversations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  athlete_id UUID REFERENCES athletes(id) ON DELETE SET NULL,
+  channel VARCHAR(20) NOT NULL, -- 'WHATSAPP' | 'GMAIL' | 'SIMULATOR'
+  contact_identifier VARCHAR(100) NOT NULL, -- Teléfono o Email
+  last_message TEXT NULL,
+  bot_active BOOLEAN DEFAULT TRUE,
+  unread_count INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_conversations_athlete_id ON conversations(athlete_id);
+
+-- Fase 5: notas privadas del organizador y el ID oficial de WhatsApp (Meta Cloud API).
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS internal_notes TEXT NULL;
+ALTER TABLE conversations ADD COLUMN IF NOT EXISTS meta_wa_id VARCHAR(100) NULL;
+
+CREATE TABLE IF NOT EXISTS crm_messages (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  conversation_id UUID REFERENCES conversations(id) ON DELETE CASCADE,
+  sender VARCHAR(20) NOT NULL, -- 'ATHLETE' | 'BOT' | 'ORGANIZER'
+  message_body TEXT NOT NULL,
+  attachment_url TEXT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Fase 5: asunto del correo cuando el canal es GMAIL.
+ALTER TABLE crm_messages ADD COLUMN IF NOT EXISTS email_subject VARCHAR(255) NULL;
+
+CREATE INDEX IF NOT EXISTS idx_crm_messages_conversation_id ON crm_messages(conversation_id);

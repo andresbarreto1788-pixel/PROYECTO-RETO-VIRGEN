@@ -1,6 +1,6 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Download, Pencil, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { API_BASE, ApiError, adminDelete, adminDownloadExport, adminGet, adminPatch } from "../../lib/api";
+import { API_BASE, ApiError, adminDelete, adminDownloadCertificate, adminDownloadExport, adminGet, adminPatch } from "../../lib/api";
 import { formatBs, formatUsd } from "../../lib/format";
 import type { Athlete, AthleteListResponse, AthleteRoute, PaymentStatus } from "../../types/admin";
 import { AddPaymentModal } from "./AddPaymentModal";
@@ -101,6 +101,10 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
 
   function handleDelete(athlete: Athlete) {
     setDeletingAthlete(athlete);
+  }
+
+  function handleDownloadCertificate(athlete: Athlete) {
+    runAction(athlete.id, () => adminDownloadCertificate(athlete.id, athlete.ci));
   }
 
   async function handleConfirmDelete() {
@@ -256,6 +260,16 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
                         className="rounded-full bg-red-500/15 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-red-400 disabled:opacity-30"
                       >
                         Rechazar
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busy}
+                        onClick={() => handleDownloadCertificate(athlete)}
+                        title="Descargar certificado PDF"
+                        aria-label="Descargar certificado PDF"
+                        className="rounded-full bg-brand-neon/15 p-1.5 text-brand-neon transition-colors hover:text-brand-neon/80 disabled:opacity-30"
+                      >
+                        <Download size={12} />
                       </button>
                       <button
                         type="button"

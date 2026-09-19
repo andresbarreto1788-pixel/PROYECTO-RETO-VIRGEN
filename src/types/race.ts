@@ -48,6 +48,7 @@ export interface RegistrationData {
   fullName: string;
   idNumber: string;
   phone: string;
+  email: string;
   emergencyContact: string;
   bloodType: BloodType;
   modality: RouteModalityId;

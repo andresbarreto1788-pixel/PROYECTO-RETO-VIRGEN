@@ -9,6 +9,7 @@ import type { BloodType, JerseySize, PaymentMethod, PaymentPlan, RegistrationDat
 
 const BLOOD_TYPES: BloodType[] = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
 const MIN_PARTIAL_RATIO = 0.5;
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface RegistrationFormProps {
   bcvRate: number;
@@ -28,6 +29,7 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
   const [fullName, setFullName] = useState("");
   const [idNumber, setIdNumber] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [bloodType, setBloodType] = useState<BloodType>("O+");
   const [modality, setModality] = useState<RouteModalityId>(ROUTE_MODALITIES[0].id);
@@ -49,8 +51,13 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
 
-    if (!fullName || !idNumber || !phone || !emergencyContact || !paymentReference) {
+    if (!fullName || !idNumber || !phone || !email || !emergencyContact || !paymentReference) {
       setError("Completa todos los campos antes de confirmar tu inscripción.");
+      return;
+    }
+
+    if (!EMAIL_PATTERN.test(email)) {
+      setError("Ingresa un correo electrónico válido.");
       return;
     }
 
@@ -77,6 +84,7 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
     formData.set("fullName", fullName);
     formData.set("idNumber", idNumber);
     formData.set("phone", phone);
+    formData.set("email", email);
     formData.set("emergencyContact", emergencyContact);
     formData.set("bloodType", bloodType);
     formData.set("modality", modality);
@@ -99,6 +107,7 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
         fullName,
         idNumber,
         phone,
+        email,
         emergencyContact,
         bloodType,
         modality,
@@ -141,6 +150,16 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
         <label>
           <span className={labelClass}>Teléfono</span>
           <input className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0412-0000000" />
+        </label>
+        <label>
+          <span className={labelClass}>Correo electrónico</span>
+          <input
+            className={inputClass}
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="tucorreo@ejemplo.com"
+          />
         </label>
         <label>
           <span className={labelClass}>Contacto de emergencia</span>

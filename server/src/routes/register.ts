@@ -34,10 +34,13 @@ const phoneSchema = z
   .max(20, "Teléfono inválido.")
   .regex(/^[0-9+()\- ]+$/, "Teléfono inválido.");
 
+const emailSchema = z.string().trim().toLowerCase().email("Correo electrónico inválido.").max(150);
+
 const registerSchema = z.object({
   fullName: z.string().trim().min(3, "Nombre inválido.").max(150),
   idNumber: idNumberSchema,
   phone: phoneSchema,
+  email: emailSchema,
   emergencyContact: z.string().trim().min(3, "Contacto de emergencia inválido.").max(100),
   bloodType: z.enum(["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"], { message: "Tipo de sangre inválido." }),
   modality: z.enum(["reto-33k", "reto-22k"], { message: "Modalidad inválida." }),
@@ -80,13 +83,14 @@ registerRouter.post(
 
       const athleteResult = await client.query(
         `INSERT INTO athletes
-          (full_name, ci, phone, emergency_contact, blood_type, route, jersey_size, payment_status, total_amount_usd)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          (full_name, ci, phone, email, emergency_contact, blood_type, route, jersey_size, payment_status, total_amount_usd)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
           body.fullName,
           body.idNumber,
           body.phone,
+          body.email,
           body.emergencyContact,
           body.bloodType,
           route,
