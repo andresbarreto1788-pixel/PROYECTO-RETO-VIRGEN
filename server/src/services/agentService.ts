@@ -26,10 +26,30 @@ const ROUTE_LABELS: Record<string, string> = {
   "22K_ILUSTRES": "22K · Ilustres",
 };
 
-const SYSTEM_PROMPT = `Eres el asistente virtual del "Reto Virgen de la Paz" (evento ciclístico en Trujillo, Venezuela).
+// Hechos estáticos del evento verificados contra el código (raceData.ts, schema.sql,
+// flyer-5ta-edicion.jpeg) al momento de escribir esto — si el evento cambia de fecha,
+// precio o kit, este bloque hay que actualizarlo a mano (no hay panel de admin para
+// estos datos todavía). Van directo en el prompt (no solo en la tool info_evento) para
+// que el modelo conteste preguntas básicas del evento sin gastar una ronda de tool-call.
+const SYSTEM_PROMPT = `Eres el asistente virtual del "Reto Virgen de la Paz", un reto ciclístico (paseo/cicloturismo a ritmo libre, no es carrera competitiva) en Trujillo, Venezuela.
 Ayudas a los atletas por WhatsApp/Gmail a consultar su inscripción, reenviar su certificado y resolver dudas del evento.
-Responde siempre en español, breve y cálido. Usa las herramientas disponibles en vez de inventar datos de inscripción.
-Si el atleta pide hablar con una persona real, usa la herramienta escalar_a_humano.`;
+
+DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies):
+- 5ta edición — Reto Virgen de la Paz 2027. Fecha: sábado 7 de enero de 2027. Sede: Trujillo, Venezuela.
+- Modalidades:
+  · Reto Completo 33K — Salida: Redoma de Trujillo · Meta: Monumento Virgen de la Paz (46,72 m de altura) · Precio: $20 USD.
+  · Reto Medio 22K — Salida: Parque Los Ilustres · Meta: Monumento Virgen de la Paz · Precio: $15 USD.
+- Desnivel acumulado aproximado: +1200 m. Puntos de hidratación: Km 8 y Km 20.
+- Kit del atleta: medalla conmemorativa troquelada, dorsal numerado y jersey oficial de finisher manga larga (tallas S, M, L, XL, XXL — diseño con pinos andinos y el logo de la Virgen). El kit se entrega el día del evento en el paddock, presentando el QR del certificado.
+- Pago: Pago Móvil o efectivo. Se puede pagar completo o en plan parcial (mínimo 50% de inicial). NO tienes el número de teléfono, banco ni cédula/RIF exactos del Pago Móvil — si preguntan eso, usa escalar_a_humano en vez de inventar un dato bancario.
+- Tasa BCV del día: consúltala siempre con la herramienta info_evento, nunca la inventes ni repitas una cifra vieja de memoria.
+- Certificado: se envía automáticamente por correo (y WhatsApp) apenas el pago queda completo (estatus PAID). Incluye un código QR único por atleta que también sirve para el check-in en el paddock el día del evento.
+- Redes y contacto: Instagram @retovirgendelapaz · WhatsApp del organizador: 0412-6557030.
+- Patrocinadores: Galanet, Alcaldía de Trujillo, TODO tv, Soccer Burguer, Tetê, Henry's, Rizo Café, La Protectora Café Gourmet, CTT Turismo.
+
+LÍMITES: no tienes información confirmada sobre edad mínima/máxima, uso obligatorio de casco u otras reglas de seguridad, política de reembolso/cancelación, ni hora límite (cutoff) de la ruta. Si preguntan algo de esto, o cualquier dato que no esté arriba ni puedas consultar con una herramienta, dilo con honestidad ("no tengo ese dato confirmado") y usa escalar_a_humano en vez de adivinar.
+
+Responde siempre en español, breve y cálido. Usa las herramientas disponibles para datos de inscripción, certificado y tasa del día — nunca los inventes. Si el atleta pide hablar con una persona real, usa la herramienta escalar_a_humano.`;
 
 export interface AgentToolLogEntry {
   name: string;
@@ -65,7 +85,8 @@ const tools: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "info_evento",
-      description: "Devuelve información general del evento: puntos de hidratación, horarios, paddock y tasa BCV del día.",
+      description:
+        "Devuelve información completa del evento: fecha, modalidades y precios, kit, hidratación, pago, paddock, redes y tasa BCV del día.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -111,11 +132,43 @@ async function toolConsultarAtleta(ci: string): Promise<string> {
 async function toolInfoEvento(): Promise<string> {
   const bcvRate = await fetchBcvRate();
   return JSON.stringify({
+    edicion: "5ta edición — Reto Virgen de la Paz 2027",
+    fecha: "Sábado 7 de enero de 2027",
+    sede: "Trujillo, Venezuela",
+    modalidades: [
+      {
+        nombre: "Reto Completo 33K",
+        salida: "Redoma de Trujillo",
+        meta: "Monumento Virgen de la Paz (46,72 m)",
+        precioUsd: 20,
+      },
+      {
+        nombre: "Reto Medio 22K",
+        salida: "Parque Los Ilustres",
+        meta: "Monumento Virgen de la Paz (46,72 m)",
+        precioUsd: 15,
+      },
+    ],
     hidratacion: ["Km 8 — 1er punto de hidratación", "Km 20 — 2do punto de hidratación"],
-    salidas: "33K desde la Redoma de Trujillo · 22K desde el Parque Los Ilustres",
-    meta: "Monumento Virgen de la Paz (46,72 m de altura)",
+    kit: ["Medalla conmemorativa troquelada", "Dorsal numerado", "Jersey oficial de finisher (manga larga, tallas S-XXL)"],
+    entregaKit: "El día del evento en el paddock, presentando el QR del certificado.",
+    metodosPago: ["Pago Móvil", "Efectivo"],
+    planesPago: "Completo o parcial (mínimo 50% inicial). Datos bancarios exactos: consultar con un organizador.",
     paddock: "Entrega de kit y zona de arranque junto al punto de salida de cada modalidad.",
     tasaBcvHoy: bcvRate,
+    instagram: "@retovirgendelapaz",
+    whatsappOrganizador: "0412-6557030",
+    patrocinadores: [
+      "Galanet",
+      "Alcaldía de Trujillo",
+      "TODO tv",
+      "Soccer Burguer",
+      "Tetê",
+      "Henry's",
+      "Rizo Café",
+      "La Protectora Café Gourmet",
+      "CTT Turismo",
+    ],
   });
 }
 
@@ -184,6 +237,22 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
     return { reply: `Entendido, te conecto con un organizador. ${result}`, toolCalls };
   }
 
+  // Preguntas frecuentes sobre cosas que el sistema NO tiene configuradas todavía
+  // (ver bloque LÍMITES del SYSTEM_PROMPT) — mejor escalar con honestidad que dejar
+  // que caigan en el saludo genérico de abajo, que ignora la pregunta por completo.
+  if (
+    /zelle|binance|cripto|usdt|n[uú]mero de pago m[oó]vil|cuenta (de )?pago m[oó]vil|banco (del|para el) pago|edad m[ií]nima|edad m[aá]xima|menor de edad|casco obligatorio|seguro m[eé]dico|reembolso|cancelaci[oó]n|hora (l[ií]mite|de corte)|cutoff/.test(
+      lower,
+    )
+  ) {
+    const result = await toolEscalarAHumano(conversationId);
+    toolCalls.push({ name: "escalar_a_humano", result });
+    return {
+      reply: `No tengo ese dato confirmado todavía, para no darte información incorrecta te conecto con un organizador. ${result}`,
+      toolCalls,
+    };
+  }
+
   if (/certificado|constancia|reenv/.test(lower) && ci) {
     const result = await toolReenviarCertificado(ci);
     toolCalls.push({ name: "reenviar_certificado", args: { ci }, result });
@@ -204,12 +273,15 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
     }
   }
 
-  if (/hidrataci|horario|paddock|evento|tasa|bcv|salida|meta/.test(lower)) {
+  if (/hidrataci|horario|paddock|evento|tasa|bcv|salida|meta|precio|cu[aá]nto (cuesta|vale)|fecha|kit|jersey|franela|medalla/.test(lower)) {
     const result = await toolInfoEvento();
     toolCalls.push({ name: "info_evento", result });
     const info = JSON.parse(result);
+    const precios = info.modalidades.map((m: { nombre: string; precioUsd: number }) => `${m.nombre}: $${m.precioUsd}`).join(" · ");
     return {
-      reply: `📍 Hidratación: ${info.hidratacion.join(", ")}.\n🚴 Salidas: ${info.salidas}\n🏁 Meta: ${info.meta}\n💵 Tasa BCV hoy: ${info.tasaBcvHoy}`,
+      reply:
+        `🚴 ${info.edicion}\n📅 ${info.fecha} — ${info.sede}\n💵 ${precios}\n` +
+        `🎁 Kit: ${info.kit.join(", ")}\n📍 Hidratación: ${info.hidratacion.join(", ")}\n💱 Tasa BCV hoy: ${info.tasaBcvHoy}`,
       toolCalls,
     };
   }
