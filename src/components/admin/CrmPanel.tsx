@@ -389,7 +389,7 @@ export function CrmPanel() {
         </div>
 
         {/* Panel central: chat */}
-        <div className="flex min-h-[420px] flex-col bg-surface">
+        <div className="flex h-[560px] flex-col bg-surface">
           {!selected ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-2 p-6 text-center text-ink-muted">
               <MessageCircle size={28} />
@@ -502,7 +502,7 @@ export function CrmPanel() {
         </div>
 
         {/* Panel derecho: Centro de Mando */}
-        <div className="border-t border-brand-card-border bg-brand-card p-4 lg:border-l lg:border-t-0">
+        <div className="h-[560px] overflow-y-auto border-t border-brand-card-border bg-brand-card p-4 lg:border-l lg:border-t-0">
           <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-ink-muted">Centro de Mando</h3>
           {!selected ? (
             <p className="text-xs text-ink-muted">Selecciona una conversación.</p>
