@@ -37,11 +37,14 @@ Ayudas a los atletas por WhatsApp/Gmail a consultar su inscripción, reenviar su
 DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies):
 - 5ta edición — Reto Virgen de la Paz 2027. Fecha: sábado 7 de enero de 2027. Sede: Trujillo, Venezuela.
 - Modalidades:
-  · Reto Completo 33K — Salida: Redoma de Trujillo · Meta: Monumento Virgen de la Paz (46,72 m de altura) · Precio: $20 USD.
-  · Reto Medio 22K — Salida: Parque Los Ilustres · Meta: Monumento Virgen de la Paz · Precio: $15 USD.
+  · Reto Completo 33K — Salida: Redoma de Trujillo · Meta: Monumento Virgen de la Paz (46,72 m de altura) · Precio: $25 USD.
+  · Reto Medio 22K — Salida: Parque Los Ilustres · Meta: Monumento Virgen de la Paz · Precio: $25 USD.
+  (El precio es único: $25 USD para ambas modalidades, 22K y 33K.)
 - Desnivel acumulado aproximado: +1200 m. Puntos de hidratación: Km 8 y Km 20.
 - Kit del atleta: medalla conmemorativa troquelada, dorsal numerado y jersey oficial de finisher manga larga (tallas S, M, L, XL, XXL — diseño con pinos andinos y el logo de la Virgen). El kit se entrega el día del evento en el paddock, presentando el QR del certificado.
-- Pago: Pago Móvil o efectivo. Se puede pagar completo o en plan parcial (mínimo 50% de inicial). NO tienes el número de teléfono, banco ni cédula/RIF exactos del Pago Móvil — si preguntan eso, usa escalar_a_humano en vez de inventar un dato bancario.
+- Pago: Pago Móvil, transferencia/depósito o efectivo. Se puede pagar completo o en plan parcial (mínimo 50% de inicial). Datos para pagar:
+  · Pago Móvil — Banco: 0108 (Banco Provincial) · Cédula/RIF: 18924508 · Teléfono: 0414-0746270.
+  · Transferencia/Depósito — Banco Provincial · Cuenta: 0108-0377-20-0100049415.
 - Tasa BCV del día: consúltala siempre con la herramienta info_evento, nunca la inventes ni repitas una cifra vieja de memoria.
 - Certificado: se envía automáticamente por correo (y WhatsApp) apenas el pago queda completo (estatus PAID). Incluye un código QR único por atleta que también sirve para el check-in en el paddock el día del evento.
 - Redes y contacto: Instagram @retovirgendelapaz · WhatsApp del organizador: 0412-6557030.
@@ -140,20 +143,24 @@ async function toolInfoEvento(): Promise<string> {
         nombre: "Reto Completo 33K",
         salida: "Redoma de Trujillo",
         meta: "Monumento Virgen de la Paz (46,72 m)",
-        precioUsd: 20,
+        precioUsd: 25,
       },
       {
         nombre: "Reto Medio 22K",
         salida: "Parque Los Ilustres",
         meta: "Monumento Virgen de la Paz (46,72 m)",
-        precioUsd: 15,
+        precioUsd: 25,
       },
     ],
     hidratacion: ["Km 8 — 1er punto de hidratación", "Km 20 — 2do punto de hidratación"],
     kit: ["Medalla conmemorativa troquelada", "Dorsal numerado", "Jersey oficial de finisher (manga larga, tallas S-XXL)"],
     entregaKit: "El día del evento en el paddock, presentando el QR del certificado.",
-    metodosPago: ["Pago Móvil", "Efectivo"],
-    planesPago: "Completo o parcial (mínimo 50% inicial). Datos bancarios exactos: consultar con un organizador.",
+    metodosPago: ["Pago Móvil", "Transferencia/Depósito", "Efectivo"],
+    datosPago: {
+      pagoMovil: { banco: "0108 (Banco Provincial)", cedulaRif: "18924508", telefono: "0414-0746270" },
+      transferencia: { banco: "Banco Provincial", cuenta: "0108-0377-20-0100049415" },
+    },
+    planesPago: "Completo o parcial (mínimo 50% inicial).",
     paddock: "Entrega de kit y zona de arranque junto al punto de salida de cada modalidad.",
     tasaBcvHoy: bcvRate,
     instagram: "@retovirgendelapaz",

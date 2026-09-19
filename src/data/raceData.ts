@@ -78,7 +78,7 @@ export const ROUTE_MODALITIES: RouteModality[] = [
     startPoint: "Redoma de Trujillo",
     finishPoint: "Monumento Virgen de la Paz (46,72 m)",
     description: "El recorrido completo, de redoma a cumbre. Paseo / cicloturismo: cada quien a su propio ritmo.",
-    priceUsd: 20,
+    priceUsd: 25,
   },
   {
     id: "reto-22k",
@@ -87,9 +87,20 @@ export const ROUTE_MODALITIES: RouteModality[] = [
     startPoint: "Parque Los Ilustres",
     finishPoint: "Monumento Virgen de la Paz (46,72 m)",
     description: "Una salida más corta hacia la misma cumbre. Paseo / cicloturismo: cada quien a su propio ritmo.",
-    priceUsd: 15,
+    priceUsd: 25,
   },
 ];
+
+export const PAYMENT_INFO = {
+  banco: "Banco Provincial",
+  bancoCodigo: "0108",
+  cuenta: "0108-0377-20-0100049415",
+  pagoMovil: {
+    banco: "0108 (Banco Provincial)",
+    cedula: "18924508",
+    telefono: "0414-0746270",
+  },
+};
 
 export const KIT_ITEMS: KitItem[] = [
   {

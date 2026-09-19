@@ -2,6 +2,7 @@ import { RefreshCw, ShieldCheck, WifiOff } from "lucide-react";
 import { useState } from "react";
 import type { BcvRateState } from "../types/race";
 import { formatBs, formatUsd } from "../lib/format";
+import { PAYMENT_INFO } from "../data/raceData";
 
 interface CurrencyConverterProps {
   bcv: BcvRateState & { refetch: () => void };
@@ -14,7 +15,7 @@ function formatUpdatedAt(updatedAt: string | null): string {
 }
 
 export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
-  const [usd, setUsd] = useState(20);
+  const [usd, setUsd] = useState(25);
 
   return (
     <div className="rounded-2xl border border-brand-card-border bg-brand-card p-5 sm:p-6">
@@ -67,8 +68,41 @@ export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
 
       {bcv.error && <p className="mt-3 text-[11px] text-ink-muted">{bcv.error}</p>}
       <p className="mt-2 text-[11px] text-ink-muted">
-        Referencia: {formatUsd(20)} ≈ {formatBs(20 * bcv.rate)}
+        Referencia: {formatUsd(25)} ≈ {formatBs(25 * bcv.rate)} · precio único 22K y 33K
       </p>
+
+      <div className="mt-5 rounded-xl border border-brand-card-border bg-surface p-4">
+        <p className="text-hud text-[10px] uppercase tracking-widest text-brand-neon">Datos para tu pago</p>
+
+        <div className="mt-3 space-y-3 text-xs">
+          <div>
+            <p className="font-bold uppercase text-ink">Pago Móvil</p>
+            <p className="mt-1 text-ink-muted">
+              Banco: <span className="text-ink">{PAYMENT_INFO.pagoMovil.banco}</span>
+            </p>
+            <p className="text-ink-muted">
+              Cédula/RIF: <span className="text-ink">{PAYMENT_INFO.pagoMovil.cedula}</span>
+            </p>
+            <p className="text-ink-muted">
+              Teléfono: <span className="text-ink">{PAYMENT_INFO.pagoMovil.telefono}</span>
+            </p>
+          </div>
+
+          <div className="border-t border-brand-card-border pt-3">
+            <p className="font-bold uppercase text-ink">Transferencia / Depósito</p>
+            <p className="mt-1 text-ink-muted">
+              Banco: <span className="text-ink">{PAYMENT_INFO.banco}</span>
+            </p>
+            <p className="text-ink-muted">
+              Cuenta: <span className="text-ink">{PAYMENT_INFO.cuenta}</span>
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-3 text-[10px] text-ink-muted">
+          Realiza tu pago y adjunta el comprobante al confirmar tu inscripción.
+        </p>
+      </div>
     </div>
   );
 }
