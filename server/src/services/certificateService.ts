@@ -21,8 +21,15 @@ const LOGO_PATH = path.join(process.cwd(), "public/images/isotipo-monumento.jpeg
 const BACKGROUND_IMAGE_PATH = path.join(process.cwd(), "public/images/certificado-fondo.jpg");
 const BACKGROUND_IMAGE_CREDIT = "Foto: José Luis Valero · CC BY-SA 3.0 · Wikimedia Commons";
 
+// Franja del pelotón sobre el camino neón, recortada del fondo ilustrado original
+// (generado con Nano Banana Pro) — se conserva solo como acento decorativo de
+// ciclismo en la franja navy, ahora que el fondo principal es la foto real del
+// monumento. Mismo criterio de resolución que LOGO_PATH.
+const CYCLISTS_IMAGE_PATH = path.join(process.cwd(), "public/images/certificado-ciclistas.jpg");
+
 let logoBuffer: Buffer | null | undefined;
 let backgroundImageBuffer: Buffer | null | undefined;
+let cyclistsImageBuffer: Buffer | null | undefined;
 
 function getLogoBuffer(): Buffer | null {
   if (logoBuffer === undefined) {
@@ -46,6 +53,17 @@ function getMonumentPhotoBuffer(): Buffer | null {
     }
   }
   return backgroundImageBuffer;
+}
+
+function getCyclistsImageBuffer(): Buffer | null {
+  if (cyclistsImageBuffer === undefined) {
+    try {
+      cyclistsImageBuffer = readFileSync(CYCLISTS_IMAGE_PATH);
+    } catch {
+      cyclistsImageBuffer = null;
+    }
+  }
+  return cyclistsImageBuffer;
 }
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -151,12 +169,12 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
 
     const logo = getLogoBuffer();
     if (logo) {
-      // Chico y arriba del todo, para que quede claro del renglón "CERTIFICADO DE
-      // PARTICIPACIÓN" (que se centra en todo el contentWidth) sin necesidad de
-      // desplazar ese título del centro real de la tarjeta.
-      const logoCenterX = contentX + 26;
-      const logoCenterY = 40;
-      const logoRadius = 22;
+      // Centrado verticalmente contra el renglón "RETO VIRGEN DE LA PAZ" y con el
+      // borde inferior por encima de "CERTIFICADO DE PARTICIPACIÓN" (que arranca en
+      // y=88) — así nunca se monta ni sobre el marco superior ni sobre el título.
+      const logoCenterX = contentX + 30;
+      const logoCenterY = 60;
+      const logoRadius = 24;
       doc.save();
       doc.circle(logoCenterX, logoCenterY, logoRadius).clip();
       doc.image(logo, logoCenterX - logoRadius, logoCenterY - logoRadius, {
@@ -217,8 +235,36 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
         .text(col.value, x, detailsY + 16, { width: columnWidth, align: "center" });
     });
 
+    const cyclists = getCyclistsImageBuffer();
+    if (cyclists) {
+      // Acento de ciclismo entre la fila de datos y el QR — el único hueco vacío de
+      // la franja navy — con los bordes fundidos hacia BACKGROUND_COLOR para que se
+      // lea como un detalle ambientado y no como una foto pegada encima.
+      const bandY = 320;
+      const bandHeight = 80;
+      const fadeWidth = 48;
+
+      doc.save();
+      doc.rect(contentX, bandY, contentWidth, bandHeight).clip();
+      doc.image(cyclists, contentX, bandY, { cover: [contentWidth, bandHeight], align: "center" });
+      doc.restore();
+
+      const fadeLeft = doc.linearGradient(contentX, 0, contentX + fadeWidth, 0);
+      fadeLeft.stop(0, BACKGROUND_COLOR, 1).stop(1, BACKGROUND_COLOR, 0);
+      doc.rect(contentX, bandY, fadeWidth, bandHeight).fill(fadeLeft);
+
+      const fadeRight = doc.linearGradient(contentRight - fadeWidth, 0, contentRight, 0);
+      fadeRight.stop(0, BACKGROUND_COLOR, 0).stop(1, BACKGROUND_COLOR, 1);
+      doc.rect(contentRight - fadeWidth, bandY, fadeWidth, bandHeight).fill(fadeRight);
+    }
+
     const qrSize = 110;
-    const qrX = contentRight - qrSize;
+    const qrCaptionWidth = qrSize + 60;
+    const qrCaptionOverhang = (qrCaptionWidth - qrSize) / 2; // 30pt a cada lado del QR
+    // El texto de abajo es más ancho que el QR — el QR se separa del borde derecho
+    // lo suficiente para que esa franja centrada quepa entera dentro del marco
+    // (con 10pt de margen) en vez de salirse por la derecha.
+    const qrX = contentRight - qrSize - qrCaptionOverhang - 10;
     const qrY = height - qrSize - 70;
 
     doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
@@ -228,7 +274,7 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
       .font("Helvetica")
       .fontSize(8)
       .text("Verifica la autenticidad escaneando el código QR", qrX - 30, qrY + qrSize + 10, {
-        width: qrSize + 60,
+        width: qrCaptionWidth,
         align: "center",
       });
 
