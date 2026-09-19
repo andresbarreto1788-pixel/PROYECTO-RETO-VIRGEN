@@ -13,10 +13,13 @@ const MUTED_COLOR = "#94A3B8";
 // que ROOT_DIR en index.ts), no relativo a este módulo compilado.
 const LOGO_PATH = path.join(process.cwd(), "public/images/isotipo-monumento.jpeg");
 
-// Fondo temático (ciclista + silueta del monumento) generado con Nano Banana Pro a
-// partir del sello oficial y el isotipo del evento — mismo criterio de resolución que
-// LOGO_PATH (relativo al cwd, no al módulo compilado en dist-server).
+// Foto real del Monumento a la Virgen de la Paz (Trujillo, Venezuela) — "El Magno
+// Monumento" de José Luis Valero (Wikimedia Commons, usuario JHeavenOnEarth),
+// licencia CC BY-SA 3.0: https://commons.wikimedia.org/wiki/File:El_Magno_Monumento..JPG
+// Mismo criterio de resolución que LOGO_PATH (relativo al cwd, no al módulo
+// compilado en dist-server).
 const BACKGROUND_IMAGE_PATH = path.join(process.cwd(), "public/images/certificado-fondo.jpg");
+const BACKGROUND_IMAGE_CREDIT = "Foto: José Luis Valero · CC BY-SA 3.0 · Wikimedia Commons";
 
 let logoBuffer: Buffer | null | undefined;
 let backgroundImageBuffer: Buffer | null | undefined;
@@ -34,7 +37,7 @@ function getLogoBuffer(): Buffer | null {
   return logoBuffer;
 }
 
-function getBackgroundImageBuffer(): Buffer | null {
+function getMonumentPhotoBuffer(): Buffer | null {
   if (backgroundImageBuffer === undefined) {
     try {
       backgroundImageBuffer = readFileSync(BACKGROUND_IMAGE_PATH);
@@ -83,11 +86,52 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
 
     const { width, height } = doc.page;
 
-    const backgroundImage = getBackgroundImageBuffer();
-    if (backgroundImage) {
-      doc.image(backgroundImage, 0, 0, { cover: [width, height] });
+    doc.rect(0, 0, width, height).fill(BACKGROUND_COLOR);
+
+    // La foto real del monumento es un retrato vertical (tomada desde abajo, cielo
+    // arriba y la Virgen ocupando el encuadre) — encaja mucho mejor como panel lateral
+    // que como fondo a página completa, así el texto siempre queda sobre el navy sólido
+    // y nunca compite con la imagen por contraste.
+    const sidebarX = 24;
+    const sidebarY = 24;
+    const sidebarWidth = 260;
+    const sidebarHeight = height - 48;
+    const contentX = sidebarX + sidebarWidth + 36;
+    const contentRight = width - 24;
+    const contentWidth = contentRight - contentX;
+
+    const monumentPhoto = getMonumentPhotoBuffer();
+    if (monumentPhoto) {
+      doc.save();
+      doc.rect(sidebarX, sidebarY, sidebarWidth, sidebarHeight).clip();
+      doc.image(monumentPhoto, sidebarX, sidebarY, {
+        cover: [sidebarWidth, sidebarHeight],
+        align: "center",
+      });
+      doc.restore();
+
+      // Degradado hacia el navy en el borde derecho del panel para que la foto se
+      // funda con el fondo en vez de cortar en seco contra el resto del certificado.
+      const blend = doc.linearGradient(sidebarX + sidebarWidth - 60, 0, sidebarX + sidebarWidth, 0);
+      blend.stop(0, BACKGROUND_COLOR, 0).stop(1, BACKGROUND_COLOR, 1);
+      doc.rect(sidebarX + sidebarWidth - 60, sidebarY, 60, sidebarHeight).fill(blend);
+
+      // Crédito de la foto real del monumento, exigido por su licencia CC BY-SA —
+      // vertical y discreto sobre el propio panel de la foto.
+      doc.save();
+      doc.rotate(-90, { origin: [sidebarX + 14, sidebarY + sidebarHeight - 14] });
+      doc
+        .fillColor(TEXT_COLOR)
+        .fillOpacity(0.75)
+        .font("Helvetica")
+        .fontSize(6)
+        .text(BACKGROUND_IMAGE_CREDIT, sidebarX + 14 - 140, sidebarY + sidebarHeight - 14 - 6, {
+          width: 280,
+        });
+      doc.fillOpacity(1);
+      doc.restore();
     } else {
-      doc.rect(0, 0, width, height).fill(BACKGROUND_COLOR);
+      doc.rect(sidebarX, sidebarY, sidebarWidth, sidebarHeight).fill("#111827");
     }
 
     doc
@@ -96,21 +140,23 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
       .rect(24, 24, width - 48, height - 48)
       .stroke();
 
-    // El fondo ilustrado pone contenido con mucho contraste propio (la Virgen, picos
-    // claros) justo detrás del bloque de título/nombre — un panel oscuro semitransparente
-    // detrás garantiza que el texto siga legible sin importar qué haya en esa zona de la
-    // imagen. Se dibuja antes que el logo para que el logo quede encima, nítido.
-    if (backgroundImage) {
-      doc.fillOpacity(0.55);
-      doc.roundedRect(40, 40, width - 80, 250, 14).fill(BACKGROUND_COLOR);
-      doc.fillOpacity(1);
-    }
+    doc
+      .lineWidth(1)
+      .strokeColor(ACCENT_COLOR)
+      .strokeOpacity(0.4)
+      .moveTo(sidebarX + sidebarWidth, sidebarY)
+      .lineTo(sidebarX + sidebarWidth, sidebarY + sidebarHeight)
+      .stroke();
+    doc.strokeOpacity(1);
 
     const logo = getLogoBuffer();
     if (logo) {
-      const logoCenterX = 74;
-      const logoCenterY = 66;
-      const logoRadius = 32;
+      // Chico y arriba del todo, para que quede claro del renglón "CERTIFICADO DE
+      // PARTICIPACIÓN" (que se centra en todo el contentWidth) sin necesidad de
+      // desplazar ese título del centro real de la tarjeta.
+      const logoCenterX = contentX + 26;
+      const logoCenterY = 40;
+      const logoRadius = 22;
       doc.save();
       doc.circle(logoCenterX, logoCenterY, logoRadius).clip();
       doc.image(logo, logoCenterX - logoRadius, logoCenterY - logoRadius, {
@@ -125,25 +171,25 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
       .fillColor(ACCENT_COLOR)
       .font("Helvetica-Bold")
       .fontSize(14)
-      .text("RETO VIRGEN DE LA PAZ", 0, 58, { align: "center", width });
+      .text("RETO VIRGEN DE LA PAZ", contentX, 58, { align: "center", width: contentWidth });
 
     doc
       .fillColor(TEXT_COLOR)
       .font("Helvetica-Bold")
-      .fontSize(32)
-      .text("CERTIFICADO DE PARTICIPACIÓN", 0, 88, { align: "center", width });
+      .fontSize(28)
+      .text("CERTIFICADO DE PARTICIPACIÓN", contentX, 88, { align: "center", width: contentWidth });
 
     doc
       .fillColor(MUTED_COLOR)
       .font("Helvetica")
       .fontSize(13)
-      .text("Se otorga el presente certificado a:", 0, 148, { align: "center", width });
+      .text("Se otorga el presente certificado a:", contentX, 148, { align: "center", width: contentWidth });
 
     doc
       .fillColor(ACCENT_COLOR)
       .font("Helvetica-Bold")
-      .fontSize(30)
-      .text(athlete.fullName.toUpperCase(), 40, 178, { align: "center", width: width - 80 });
+      .fontSize(28)
+      .text(athlete.fullName.toUpperCase(), contentX, 178, { align: "center", width: contentWidth });
 
     const routeLabel = ROUTE_LABELS[athlete.route] ?? athlete.route;
     const bibLabel = athlete.bibNumber != null ? String(athlete.bibNumber) : "Sin asignar";
@@ -156,9 +202,9 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
     ];
 
     const detailsY = 250;
-    const columnWidth = (width - 120) / columns.length;
+    const columnWidth = contentWidth / columns.length;
     columns.forEach((col, i) => {
-      const x = 60 + i * columnWidth;
+      const x = contentX + i * columnWidth;
       doc
         .fillColor(MUTED_COLOR)
         .font("Helvetica")
@@ -172,22 +218,11 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
     });
 
     const qrSize = 110;
-    const qrX = width - qrSize - 60;
+    const qrX = contentRight - qrSize;
     const qrY = height - qrSize - 70;
-    const qrPad = 10;
 
-    // Con el fondo ilustrado, el área bajo el QR puede tener cualquier combinación de
-    // tonos (camino neón, ladera oscura, etc.) — una placa sólida detrás garantiza el
-    // contraste dark/light del QR sin importar qué haya debajo, para que siga
-    // escaneando de forma confiable en el paddock.
-    doc
-      .roundedRect(qrX - qrPad, qrY - qrPad, qrSize + qrPad * 2, qrSize + qrPad * 2, 10)
-      .fill(BACKGROUND_COLOR);
     doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
 
-    doc
-      .roundedRect(qrX - 30, qrY + qrSize + 6, qrSize + 60, 26, 6)
-      .fill("#0B0D0E");
     doc
       .fillColor(MUTED_COLOR)
       .font("Helvetica")
