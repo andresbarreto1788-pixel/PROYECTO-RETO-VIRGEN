@@ -6,9 +6,9 @@ export function Footer() {
     <footer className="bg-surface px-5 py-12 sm:px-8">
       <div className="mx-auto flex max-w-6xl flex-col items-center gap-6 text-center">
         <img
-          src="/images/sello-oficial.jpeg"
+          src="/images/sello-oficial-badge.png"
           alt="Sello oficial Reto Virgen de la Paz"
-          className="h-16 w-16 rounded-full object-cover"
+          className="h-24 w-24 object-contain sm:h-28 sm:w-28"
         />
         <h3 className="text-xl font-black uppercase text-ink">{EVENT.raceName}</h3>
         <p className="max-w-md text-xs text-ink-muted">
