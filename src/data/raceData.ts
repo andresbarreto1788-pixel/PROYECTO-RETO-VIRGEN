@@ -57,7 +57,7 @@ export const PHASES: RacePhase[] = [
     kicker: "Fase 04 · Tarima de premiación",
     description:
       "Llegada triunfal al paddock. La tarima recibe a cada finisher mientras la zona de premiación celebra el esfuerzo colectivo de todo el pelotón trujillano, sin importar el ritmo de cada quien.",
-    image: "/images/medalla-2026.jpeg",
+    image: "/images/medalla-2027.jpeg",
   },
 ];
 
