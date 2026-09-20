@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { KIT_ITEMS, PHASES } from "../data/raceData";
 import { ElevationChart } from "./ElevationChart";
 import { JerseyShowcase } from "./JerseyShowcase";
+import { ExpandableImage } from "./ui/ExpandableImage";
 
 const LIST_KIT_ITEMS = KIT_ITEMS.filter((item) => item.id !== "jersey");
 
@@ -31,14 +32,14 @@ export function ScrollJourney() {
                 transition={{ duration: 0.6 }}
                 className="relative aspect-[4/3] overflow-hidden rounded-3xl border border-brand-card-border bg-brand-card"
               >
-                <img
+                <ExpandableImage
                   src={phase.image}
                   alt={phase.title}
+                  wrapperClassName="h-full w-full"
                   className="h-full w-full object-cover opacity-90"
-                  loading="lazy"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-surface/80 via-transparent to-transparent" />
-                <div className="absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-neon text-hud text-lg font-black text-surface">
+                <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-surface/80 via-transparent to-transparent" />
+                <div className="pointer-events-none absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-brand-neon text-hud text-lg font-black text-surface">
                   {String(phase.index).padStart(2, "0")}
                 </div>
               </motion.div>

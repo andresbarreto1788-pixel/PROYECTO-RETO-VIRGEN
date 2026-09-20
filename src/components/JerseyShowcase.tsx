@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { JERSEY_IMAGES, JERSEY_SIZES, KIT_ITEMS } from "../data/raceData";
 import type { JerseySize } from "../types/race";
+import { ExpandableImage } from "./ui/ExpandableImage";
 
 const jersey = KIT_ITEMS.find((item) => item.id === "jersey")!;
 
@@ -18,19 +19,19 @@ export function JerseyShowcase() {
     >
       <div className="mx-auto grid w-full max-w-sm grid-cols-2 gap-3">
         <div className="col-span-2 overflow-hidden rounded-2xl bg-surface-alt">
-          <img
+          <ExpandableImage
             src={JERSEY_IMAGES.front}
             alt={`${jersey.title} — vista frontal`}
+            wrapperClassName="h-full w-full"
             className="h-full w-full object-cover"
-            loading="lazy"
           />
         </div>
         <div className="col-span-2 overflow-hidden rounded-2xl bg-surface-alt">
-          <img
+          <ExpandableImage
             src={JERSEY_IMAGES.back}
             alt={`${jersey.title} — vista trasera`}
+            wrapperClassName="h-full w-full"
             className="h-full w-full object-cover"
-            loading="lazy"
           />
         </div>
       </div>

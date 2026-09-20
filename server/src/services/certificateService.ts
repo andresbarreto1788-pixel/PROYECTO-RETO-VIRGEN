@@ -169,11 +169,12 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
 
     const logo = getLogoBuffer();
     if (logo) {
-      // Centrado verticalmente contra el renglón "RETO VIRGEN DE LA PAZ" y con el
-      // borde inferior por encima de "CERTIFICADO DE PARTICIPACIÓN" (que arranca en
-      // y=88) — así nunca se monta ni sobre el marco superior ni sobre el título.
-      const logoCenterX = contentX + 30;
-      const logoCenterY = 60;
+      // "CERTIFICADO DE PARTICIPACIÓN" (fontSize 28 bold) es casi tan ancho como
+      // contentWidth, así que centrado deja muy poco margen a la izquierda antes de
+      // su "C" — el logo se recuesta contra el divisor de la foto lateral, lejos del
+      // título, en vez de centrarlo contra "RETO VIRGEN DE LA PAZ".
+      const logoCenterX = contentX - 6;
+      const logoCenterY = 56;
       const logoRadius = 24;
       doc.save();
       doc.circle(logoCenterX, logoCenterY, logoRadius).clip();
