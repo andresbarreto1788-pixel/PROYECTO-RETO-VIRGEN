@@ -47,7 +47,7 @@ export const PHASES: RacePhase[] = [
     title: "El Monumento",
     kicker: "Fase 03 · Cumbre · 46,72 m",
     description:
-      "En la cima, bajo el arco Specialized / Galanet, espera el Monumento a la Virgen de la Paz. Aquí se entrega el kit oficial: medalla conmemorativa troquelada, dorsal numerado y jersey de finisher.",
+      "En la cima, bajo el arco, espera el Monumento a la Virgen de la Paz. Aquí se entrega el kit oficial: medalla conmemorativa troquelada, dorsal numerado y jersey de finisher.",
     image: "/images/isotipo-monumento.jpeg",
   },
   {

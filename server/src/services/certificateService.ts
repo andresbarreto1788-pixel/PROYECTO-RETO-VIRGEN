@@ -3,10 +3,28 @@ import path from "node:path";
 import PDFDocument from "pdfkit";
 import QRCode from "qrcode";
 
-const BACKGROUND_COLOR = "#0F172A";
+// Paleta tomada del flyer oficial de la 5ta edición (fondo gris carbón con halftone
+// de pinos, texto lima) en vez del navy original — mismo layout con la foto del
+// monumento, solo cambia la paleta para que combine con las piezas de marketing.
+// BACKGROUND_COLOR es el tono plano promedio de la textura (abajo), usado como color
+// de relleno de respaldo y como destino de los degradados que funden la foto contra
+// el fondo. El acento lima se mantiene: es el color de marca del sitio (botones,
+// EVENT.*, etc.), no el gris/verde del fondo que se pidió cambiar.
+const BACKGROUND_COLOR = "#2A2A2D";
 const ACCENT_COLOR = "#CCFF00";
 const TEXT_COLOR = "#F8FAFC";
-const MUTED_COLOR = "#94A3B8";
+const MUTED_COLOR = "#A6A6AA";
+
+// Textura de fondo (halftone de puntos + silueta de pinos, desaturada a gris) tomada
+// del mismo fondo que usan las piezas de marketing del organizador, para que el
+// certificado no sea un color plano. Igual criterio de resolución que el resto de
+// assets (relativo al cwd, no al módulo compilado en dist-server).
+const BACKGROUND_TEXTURE_PATH = path.join(process.cwd(), "public/images/certificado-fondo-textura.jpg");
+
+// Ciclista recortado de ese mismo fondo (silueta saltando), como elemento decorativo
+// independiente — en el fondo completo caía encima del título, así que se coloca
+// aparte en el hueco vacío entre la fila de datos y el QR.
+const CYCLIST_CUTOUT_PATH = path.join(process.cwd(), "public/images/certificado-ciclista.png");
 
 // Mismo isotipo que usa el sitio (Header.tsx, ProofCard.tsx), servido desde /public —
 // vive fuera de dist-server, así que se resuelve relativo al cwd del proceso (igual
@@ -21,15 +39,10 @@ const LOGO_PATH = path.join(process.cwd(), "public/images/isotipo-monumento.jpeg
 const BACKGROUND_IMAGE_PATH = path.join(process.cwd(), "public/images/certificado-fondo.jpg");
 const BACKGROUND_IMAGE_CREDIT = "Foto: José Luis Valero · CC BY-SA 3.0 · Wikimedia Commons";
 
-// Franja del pelotón sobre el camino neón, recortada del fondo ilustrado original
-// (generado con Nano Banana Pro) — se conserva solo como acento decorativo de
-// ciclismo en la franja navy, ahora que el fondo principal es la foto real del
-// monumento. Mismo criterio de resolución que LOGO_PATH.
-const CYCLISTS_IMAGE_PATH = path.join(process.cwd(), "public/images/certificado-ciclistas.jpg");
-
 let logoBuffer: Buffer | null | undefined;
 let backgroundImageBuffer: Buffer | null | undefined;
-let cyclistsImageBuffer: Buffer | null | undefined;
+let backgroundTextureBuffer: Buffer | null | undefined;
+let cyclistCutoutBuffer: Buffer | null | undefined;
 
 function getLogoBuffer(): Buffer | null {
   if (logoBuffer === undefined) {
@@ -55,15 +68,26 @@ function getMonumentPhotoBuffer(): Buffer | null {
   return backgroundImageBuffer;
 }
 
-function getCyclistsImageBuffer(): Buffer | null {
-  if (cyclistsImageBuffer === undefined) {
+function getBackgroundTextureBuffer(): Buffer | null {
+  if (backgroundTextureBuffer === undefined) {
     try {
-      cyclistsImageBuffer = readFileSync(CYCLISTS_IMAGE_PATH);
+      backgroundTextureBuffer = readFileSync(BACKGROUND_TEXTURE_PATH);
     } catch {
-      cyclistsImageBuffer = null;
+      backgroundTextureBuffer = null;
     }
   }
-  return cyclistsImageBuffer;
+  return backgroundTextureBuffer;
+}
+
+function getCyclistCutoutBuffer(): Buffer | null {
+  if (cyclistCutoutBuffer === undefined) {
+    try {
+      cyclistCutoutBuffer = readFileSync(CYCLIST_CUTOUT_PATH);
+    } catch {
+      cyclistCutoutBuffer = null;
+    }
+  }
+  return cyclistCutoutBuffer;
 }
 
 const ROUTE_LABELS: Record<string, string> = {
@@ -89,7 +113,7 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
   const qrBuffer = await QRCode.toBuffer(qrPayload, {
     margin: 1,
     width: 240,
-    color: { dark: "#0B0D0E", light: ACCENT_COLOR },
+    color: { dark: "#10140F", light: ACCENT_COLOR },
   });
 
   return new Promise((resolve, reject) => {
@@ -117,6 +141,33 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
     const contentX = sidebarX + sidebarWidth + 36;
     const contentRight = width - 24;
     const contentWidth = contentRight - contentX;
+
+    // Fondo del panel de contenido: el mismo arte de fondo (ciclista + pinos + halftone)
+    // que usan las piezas de marketing del organizador, recortado sin el texto propio
+    // del flyer. Va detrás de todo el texto, así que se dibuja aquí, antes del marco y
+    // el resto de elementos.
+    const bgPanelX = sidebarX + sidebarWidth;
+    const bgPanelWidth = contentRight - bgPanelX;
+    const backgroundTexture = getBackgroundTextureBuffer();
+    if (backgroundTexture) {
+      doc.save();
+      doc.rect(bgPanelX, sidebarY, bgPanelWidth, sidebarHeight).clip();
+      doc.image(backgroundTexture, bgPanelX, sidebarY, {
+        cover: [bgPanelWidth, sidebarHeight],
+        align: "center",
+      });
+      doc.restore();
+
+      // Esa imagen tiene un cielo claro con un ciclista saltando en la mitad superior
+      // (para que el ciclista no quede tapado por el título) y bosque oscuro abajo —
+      // sin velo, el texto blanco/lima de toda la cabecera y la fila de datos quedaría
+      // ilegible o compitiendo con las copas de los pinos. Se oscurece con un velo
+      // fuerte arriba que nunca baja de un mínimo, para que todo el texto lea parejo
+      // y el fondo quede como un detalle ambientado, no como protagonista.
+      const scrim = doc.linearGradient(0, sidebarY, 0, sidebarY + sidebarHeight);
+      scrim.stop(0, BACKGROUND_COLOR, 0.88).stop(0.45, BACKGROUND_COLOR, 0.6).stop(1, BACKGROUND_COLOR, 0.45);
+      doc.rect(bgPanelX, sidebarY, bgPanelWidth, sidebarHeight).fill(scrim);
+    }
 
     const monumentPhoto = getMonumentPhotoBuffer();
     if (monumentPhoto) {
@@ -149,7 +200,7 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
       doc.fillOpacity(1);
       doc.restore();
     } else {
-      doc.rect(sidebarX, sidebarY, sidebarWidth, sidebarHeight).fill("#111827");
+      doc.rect(sidebarX, sidebarY, sidebarWidth, sidebarHeight).fill("#171D1A");
     }
 
     doc
@@ -236,27 +287,18 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
         .text(col.value, x, detailsY + 16, { width: columnWidth, align: "center" });
     });
 
-    const cyclists = getCyclistsImageBuffer();
-    if (cyclists) {
-      // Acento de ciclismo entre la fila de datos y el QR — el único hueco vacío de
-      // la franja navy — con los bordes fundidos hacia BACKGROUND_COLOR para que se
-      // lea como un detalle ambientado y no como una foto pegada encima.
-      const bandY = 320;
-      const bandHeight = 80;
-      const fadeWidth = 48;
-
-      doc.save();
-      doc.rect(contentX, bandY, contentWidth, bandHeight).clip();
-      doc.image(cyclists, contentX, bandY, { cover: [contentWidth, bandHeight], align: "center" });
-      doc.restore();
-
-      const fadeLeft = doc.linearGradient(contentX, 0, contentX + fadeWidth, 0);
-      fadeLeft.stop(0, BACKGROUND_COLOR, 1).stop(1, BACKGROUND_COLOR, 0);
-      doc.rect(contentX, bandY, fadeWidth, bandHeight).fill(fadeLeft);
-
-      const fadeRight = doc.linearGradient(contentRight - fadeWidth, 0, contentRight, 0);
-      fadeRight.stop(0, BACKGROUND_COLOR, 0).stop(1, BACKGROUND_COLOR, 1);
-      doc.rect(contentRight - fadeWidth, bandY, fadeWidth, bandHeight).fill(fadeRight);
+    const cyclist = getCyclistCutoutBuffer();
+    if (cyclist) {
+      // Hueco libre entre la fila de datos (termina ~286) y el QR (empieza ~415):
+      // el mismo ciclista saltando del fondo, recortado aparte para que no compita
+      // con ningún texto.
+      const cyclistHeight = 92;
+      const cyclistWidth = cyclistHeight * (320 / 344);
+      const cyclistZoneTop = detailsY + 36;
+      const cyclistZoneBottom = height - 110 - 70;
+      const cyclistX = contentX + (contentWidth - cyclistWidth) / 2;
+      const cyclistY = cyclistZoneTop + (cyclistZoneBottom - cyclistZoneTop - cyclistHeight) / 2;
+      doc.image(cyclist, cyclistX, cyclistY, { width: cyclistWidth, height: cyclistHeight });
     }
 
     const qrSize = 110;
