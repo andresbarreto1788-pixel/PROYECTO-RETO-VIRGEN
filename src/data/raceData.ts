@@ -8,8 +8,12 @@ export const EVENT = {
   elevationGainM: 1200,
   summitHeightM: 46.72,
   instagram: "@retovirgendelapaz",
-  whatsapp: "+58 414-0746270",
-  whatsappDigits: "584140746270",
+  // Número del chatbot (Biker) — atención general / chat automático en la página.
+  whatsapp: "+58 422-0571234",
+  whatsappDigits: "584220571234",
+  // Número de Gustavo Briceño — referente humano y verificador de pagos.
+  organizerWhatsapp: "+58 414-0746270",
+  organizerWhatsappDigits: "584140746270",
 };
 
 export const HUD_STATS = [

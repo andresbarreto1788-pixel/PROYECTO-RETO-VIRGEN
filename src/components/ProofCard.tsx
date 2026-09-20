@@ -131,7 +131,7 @@ export function ProofCard({ data, qrDataUrl, onReset }: ProofCardProps) {
       </div>
 
       <p className="mt-4 text-[11px] leading-relaxed text-ink-muted">
-        Tu inscripción se confirma al recibir la validación del organizador por WhatsApp (0414-0746270).
+        Tu inscripción se confirma al recibir la validación del organizador por WhatsApp ({EVENT.organizerWhatsapp}).
         Guarda este carnet: el QR lo necesitarás para retirar tu kit el día del evento.
       </p>
     </div>

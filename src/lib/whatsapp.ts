@@ -34,5 +34,5 @@ export function buildRegistrationWhatsAppLink(data: RegistrationData): string {
   ];
 
   const text = encodeURIComponent(lines.join("\n"));
-  return `https://wa.me/${EVENT.whatsappDigits}?text=${text}`;
+  return `https://wa.me/${EVENT.organizerWhatsappDigits}?text=${text}`;
 }
