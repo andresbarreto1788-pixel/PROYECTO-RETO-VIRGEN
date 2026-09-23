@@ -42,23 +42,34 @@ const phoneSchema = z
 
 const emailSchema = z.string().trim().toLowerCase().email("Correo electrónico inválido.").max(150);
 
-const registerSchema = z.object({
-  fullName: z.string().trim().min(3, "Nombre inválido.").max(150),
-  idNumber: idNumberSchema,
-  phone: phoneSchema,
-  email: emailSchema,
-  emergencyContact: z.string().trim().min(3, "Contacto de emergencia inválido.").max(100),
-  bloodType: z.enum(["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"], { message: "Tipo de sangre inválido." }),
-  modality: z.enum(["reto-33k", "reto-22k"], { message: "Modalidad inválida." }),
-  jerseySize: z.enum(["S", "M", "L", "XL", "XXL"], { message: "Talla inválida." }),
-  paymentMethod: z.enum(["pago-movil", "transferencia"], { message: "Método de pago inválido." }),
-  paymentReference: z.string().trim().min(1, "Falta la referencia de pago.").max(50),
-  paymentPlan: z.enum(["full", "partial"], { message: "Plan de pago inválido." }),
-  amountUsd: z.coerce.number().positive("Monto inválido.").max(100_000),
-  bcvRate: z.coerce.number().positive("Tasa BCV inválida.").max(1_000_000),
-  paidAmountBs: z.coerce.number().positive().max(100_000_000).optional(),
-  paidAmountUsd: z.coerce.number().positive().max(100_000).optional(),
-});
+const JERSEY_SIZES_BY_CUT: Record<string, readonly string[]> = {
+  caballero: ["S", "M", "L", "XL", "XXL"],
+  dama: ["XS", "S", "M", "L", "XL"],
+};
+
+const registerSchema = z
+  .object({
+    fullName: z.string().trim().min(3, "Nombre inválido.").max(150),
+    idNumber: idNumberSchema,
+    phone: phoneSchema,
+    email: emailSchema,
+    emergencyContact: z.string().trim().min(3, "Contacto de emergencia inválido.").max(100),
+    bloodType: z.enum(["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"], { message: "Tipo de sangre inválido." }),
+    modality: z.enum(["reto-33k", "reto-22k"], { message: "Modalidad inválida." }),
+    jerseyCut: z.enum(["caballero", "dama"], { message: "Corte de jersey inválido." }),
+    jerseySize: z.enum(["XS", "S", "M", "L", "XL", "XXL"], { message: "Talla inválida." }),
+    paymentMethod: z.enum(["pago-movil", "transferencia"], { message: "Método de pago inválido." }),
+    paymentReference: z.string().trim().min(1, "Falta la referencia de pago.").max(50),
+    paymentPlan: z.enum(["full", "partial"], { message: "Plan de pago inválido." }),
+    amountUsd: z.coerce.number().positive("Monto inválido.").max(100_000),
+    bcvRate: z.coerce.number().positive("Tasa BCV inválida.").max(1_000_000),
+    paidAmountBs: z.coerce.number().positive().max(100_000_000).optional(),
+    paidAmountUsd: z.coerce.number().positive().max(100_000).optional(),
+  })
+  .refine((data) => JERSEY_SIZES_BY_CUT[data.jerseyCut]?.includes(data.jerseySize), {
+    message: "La talla no corresponde al corte seleccionado.",
+    path: ["jerseySize"],
+  });
 
 registerRouter.post(
   "/",
@@ -89,8 +100,8 @@ registerRouter.post(
 
       const athleteResult = await client.query(
         `INSERT INTO athletes
-          (full_name, ci, phone, email, emergency_contact, blood_type, route, jersey_size, payment_status, total_amount_usd)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+          (full_name, ci, phone, email, emergency_contact, blood_type, route, jersey_cut, jersey_size, payment_status, total_amount_usd)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
          RETURNING *`,
         [
           body.fullName,
@@ -100,6 +111,7 @@ registerRouter.post(
           body.emergencyContact,
           body.bloodType,
           route,
+          body.jerseyCut,
           body.jerseySize,
           paymentStatus,
           amountUsd,

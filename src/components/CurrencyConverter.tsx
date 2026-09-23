@@ -15,7 +15,7 @@ function formatUpdatedAt(updatedAt: string | null): string {
 }
 
 export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
-  const [usd, setUsd] = useState(25);
+  const [usd, setUsd] = useState(30);
 
   return (
     <div className="rounded-2xl border border-brand-card-border bg-brand-card p-5 sm:p-6">
@@ -68,7 +68,7 @@ export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
 
       {bcv.error && <p className="mt-3 text-[11px] text-ink-muted">{bcv.error}</p>}
       <p className="mt-2 text-[11px] text-ink-muted">
-        Referencia: {formatUsd(25)} ≈ {formatBs(25 * bcv.rate)} · precio único 22K y 33K
+        Referencia: {formatUsd(30)} ≈ {formatBs(30 * bcv.rate)} · precio único 22K y 33K
       </p>
 
       <div className="mt-5 rounded-xl border border-brand-card-border bg-surface p-4">

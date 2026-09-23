@@ -11,7 +11,12 @@ import { recomputeAthletePaymentStatus } from "../services/paymentService.js";
 
 export const adminRouter = Router();
 
-const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL"] as const;
+const JERSEY_CUTS = ["caballero", "dama"] as const;
+const JERSEY_SIZES = ["XS", "S", "M", "L", "XL", "XXL"] as const;
+const JERSEY_SIZES_BY_CUT: Record<string, readonly string[]> = {
+  caballero: ["S", "M", "L", "XL", "XXL"],
+  dama: ["XS", "S", "M", "L", "XL"],
+};
 const ROUTES = ["33K_REDOMA", "22K_ILUSTRES"] as const;
 const BLOOD_TYPES = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"] as const;
 
@@ -157,7 +162,16 @@ adminRouter.get("/athletes/:id", requireAdmin, async (req, res) => {
 
 // --- Editar / eliminar atleta ---------------------------------------------
 
-const EDITABLE_FIELDS = ["fullName", "ci", "phone", "emergencyContact", "bloodType", "route", "jerseySize"] as const;
+const EDITABLE_FIELDS = [
+  "fullName",
+  "ci",
+  "phone",
+  "emergencyContact",
+  "bloodType",
+  "route",
+  "jerseyCut",
+  "jerseySize",
+] as const;
 const FIELD_TO_COLUMN: Record<(typeof EDITABLE_FIELDS)[number], string> = {
   fullName: "full_name",
   ci: "ci",
@@ -165,6 +179,7 @@ const FIELD_TO_COLUMN: Record<(typeof EDITABLE_FIELDS)[number], string> = {
   emergencyContact: "emergency_contact",
   bloodType: "blood_type",
   route: "route",
+  jerseyCut: "jersey_cut",
   jerseySize: "jersey_size",
 };
 
@@ -176,10 +191,16 @@ const editAthleteSchema = z
     emergencyContact: z.string().trim().min(3, "Contacto de emergencia inválido.").max(100),
     bloodType: z.enum(BLOOD_TYPES, { message: "Tipo de sangre inválido." }),
     route: z.enum(ROUTES, { message: "Ruta inválida." }),
+    jerseyCut: z.enum(JERSEY_CUTS, { message: "Corte de jersey inválido." }),
     jerseySize: z.enum(JERSEY_SIZES, { message: "Talla inválida." }),
   })
   .partial()
-  .refine((data) => Object.keys(data).length > 0, { message: "No hay campos para actualizar." });
+  .refine((data) => Object.keys(data).length > 0, { message: "No hay campos para actualizar." })
+  .refine(
+    (data) =>
+      !data.jerseySize || !data.jerseyCut || (JERSEY_SIZES_BY_CUT[data.jerseyCut]?.includes(data.jerseySize) ?? true),
+    { message: "La talla no corresponde al corte seleccionado.", path: ["jerseySize"] },
+  );
 
 adminRouter.patch("/athletes/:id", requireAdmin, validateBody(editAthleteSchema), async (req, res) => {
   const id = String(req.params.id);
@@ -288,6 +309,7 @@ adminRouter.patch("/athletes/:id/payment", requireAdmin, validateBody(paymentAct
         fullName: athlete.full_name,
         ci: athlete.ci,
         route: athlete.route,
+        jerseyCut: athlete.jersey_cut,
         jerseySize: athlete.jersey_size,
         bibNumber: athlete.bib_number,
         qrToken: athlete.qr_token,
@@ -326,6 +348,7 @@ adminRouter.get("/check-in/preview/:qrToken", requireAdmin, async (req, res) => 
   res.json({
     fullName: athlete.full_name,
     route: athlete.route,
+    jerseyCut: athlete.jersey_cut,
     jerseySize: athlete.jersey_size,
     paymentStatus: athlete.payment_status,
     checkedIn: athlete.checked_in,
@@ -357,6 +380,7 @@ adminRouter.post("/check-in", requireAdmin, validateBody(checkInSchema), async (
         status: "already_checked_in",
         fullName: athlete.full_name,
         route: athlete.route,
+        jerseyCut: athlete.jersey_cut,
         jerseySize: athlete.jersey_size,
         bibNumber: athlete.bib_number,
       });
@@ -398,6 +422,7 @@ adminRouter.post("/check-in", requireAdmin, validateBody(checkInSchema), async (
       status: "checked_in",
       fullName: athlete.full_name,
       route: athlete.route,
+      jerseyCut: athlete.jersey_cut,
       jerseySize: athlete.jersey_size,
       bibNumber,
     });
@@ -427,6 +452,7 @@ adminRouter.get("/athletes/:id/certificate", requireAdmin, async (req, res) => {
     fullName: athlete.full_name,
     ci: athlete.ci,
     route: athlete.route,
+    jerseyCut: athlete.jersey_cut,
     jerseySize: athlete.jersey_size,
     bibNumber: athlete.bib_number,
     qrToken: athlete.qr_token,
@@ -443,10 +469,13 @@ adminRouter.get("/athletes/:id/certificate", requireAdmin, async (req, res) => {
 adminRouter.get("/export", requireAdmin, async (_req, res) => {
   const { rows } = await pool.query("SELECT * FROM athletes ORDER BY route, full_name");
 
-  const header = ["Dorsal", "Nombre", "Cédula", "Teléfono", "Ruta", "Talla", "Estatus de Pago", "Check-in", "Fecha Check-in"];
+  const header = ["Dorsal", "Nombre", "Cédula", "Teléfono", "Ruta", "Corte", "Talla", "Estatus de Pago", "Check-in", "Fecha Check-in"];
   const lines = [header.join(",")];
 
-  const sizeCounts: Record<string, number> = { S: 0, M: 0, L: 0, XL: 0, XXL: 0 };
+  const sizeCountsByCut: Record<string, Record<string, number>> = {
+    caballero: Object.fromEntries(JERSEY_SIZES_BY_CUT.caballero.map((s) => [s, 0])),
+    dama: Object.fromEntries(JERSEY_SIZES_BY_CUT.dama.map((s) => [s, 0])),
+  };
 
   for (const a of rows) {
     lines.push(
@@ -456,6 +485,7 @@ adminRouter.get("/export", requireAdmin, async (_req, res) => {
         a.ci,
         a.phone,
         a.route,
+        a.jersey_cut,
         a.jersey_size,
         a.payment_status,
         a.checked_in ? "SI" : "NO",
@@ -463,13 +493,17 @@ adminRouter.get("/export", requireAdmin, async (_req, res) => {
       ].join(","),
     );
 
-    if (a.jersey_size in sizeCounts) sizeCounts[a.jersey_size] += 1;
+    if (sizeCountsByCut[a.jersey_cut] && a.jersey_size in sizeCountsByCut[a.jersey_cut]) {
+      sizeCountsByCut[a.jersey_cut][a.jersey_size] += 1;
+    }
   }
 
-  lines.push("");
-  lines.push("RESUMEN DE TALLAS");
-  for (const size of JERSEY_SIZES) {
-    lines.push(`${size},${sizeCounts[size]}`);
+  for (const cut of JERSEY_CUTS) {
+    lines.push("");
+    lines.push(`RESUMEN DE TALLAS — ${cut.toUpperCase()}`);
+    for (const size of JERSEY_SIZES_BY_CUT[cut]) {
+      lines.push(`${size},${sizeCountsByCut[cut][size]}`);
+    }
   }
 
   res.setHeader("Content-Type", "text/csv; charset=utf-8");

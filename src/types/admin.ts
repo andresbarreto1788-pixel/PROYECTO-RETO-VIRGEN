@@ -1,4 +1,4 @@
-import type { BloodType, JerseySize } from "./race";
+import type { BloodType, JerseyCut, JerseySize } from "./race";
 
 export type AthleteRoute = "33K_REDOMA" | "22K_ILUSTRES";
 
@@ -28,6 +28,7 @@ export interface Athlete {
   emergencyContact: string;
   bloodType: BloodType;
   route: AthleteRoute;
+  jerseyCut: JerseyCut;
   jerseySize: JerseySize;
   paymentStatus: PaymentStatus;
   totalAmountUsd: number;
@@ -57,12 +58,20 @@ export interface AdminMetrics {
 }
 
 export type CheckInResult =
-  | { status: "checked_in" | "already_checked_in"; fullName: string; route: AthleteRoute; jerseySize: JerseySize; bibNumber: number }
+  | {
+      status: "checked_in" | "already_checked_in";
+      fullName: string;
+      route: AthleteRoute;
+      jerseyCut: JerseyCut;
+      jerseySize: JerseySize;
+      bibNumber: number;
+    }
   | { status: "blocked"; paymentStatus: PaymentStatus; fullName: string; owedUsd: number };
 
 export interface CheckInPreview {
   fullName: string;
   route: AthleteRoute;
+  jerseyCut: JerseyCut;
   jerseySize: JerseySize;
   paymentStatus: PaymentStatus;
   checkedIn: boolean;
@@ -80,6 +89,7 @@ export interface Conversation {
   athleteFullName: string | null;
   athleteCi: string | null;
   athleteRoute: AthleteRoute | null;
+  athleteJerseyCut: JerseyCut | null;
   athleteJerseySize: JerseySize | null;
   athletePaymentStatus: PaymentStatus | null;
   athleteBibNumber: number | null;

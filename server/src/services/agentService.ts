@@ -39,11 +39,11 @@ Ayudas a los atletas por WhatsApp/Gmail a consultar su inscripción, reenviar su
 DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies):
 - 5ta edición — Reto Virgen de la Paz 2027. Fecha: domingo 17 de enero de 2027. Sede: Trujillo, Venezuela.
 - Modalidades:
-  · Reto Completo 33K — Salida: Redoma de Trujillo · Meta: Monumento Virgen de la Paz (46,72 m de altura) · Precio: $25 USD.
-  · Reto Medio 22K — Salida: Parque Los Ilustres · Meta: Monumento Virgen de la Paz · Precio: $25 USD.
-  (El precio es único: $25 USD para ambas modalidades, 22K y 33K.)
+  · Reto Completo 33K — Salida: Redoma de Trujillo · Meta: Monumento Virgen de la Paz (46,72 m de altura) · Precio: $30 USD.
+  · Reto Medio 22K — Salida: Parque Los Ilustres · Meta: Monumento Virgen de la Paz · Precio: $30 USD.
+  (El precio es único: $30 USD para ambas modalidades, 22K y 33K. Se cobra a la tasa BCV del día.)
 - Desnivel acumulado aproximado: +1200 m. Puntos de hidratación: Km 8 y Km 20.
-- Kit del atleta: medalla conmemorativa troquelada, dorsal numerado y jersey oficial de finisher manga larga (tallas S, M, L, XL, XXL — diseño con pinos andinos y el logo de la Virgen). El kit se entrega el día del evento en el paddock, presentando el QR del certificado.
+- Kit del atleta: medalla conmemorativa troquelada, dorsal numerado y jersey oficial de finisher manga larga (diseño con pinos andinos y el logo de la Virgen), disponible en dos cortes: Caballero (tallas S, M, L, XL, XXL) y Dama (tallas XS, S, M, L, XL). El atleta elige corte y talla al inscribirse. El kit se entrega el día del evento en el paddock, presentando el QR del certificado.
 - Pago: Pago Móvil o Transferencia/Depósito. Se puede pagar completo o en plan parcial (mínimo 50% de inicial). Datos para pagar:
   · Pago Móvil — Banco: 0108 (Banco Provincial) · Cédula/RIF: 18924508 · Teléfono: 0414-0746270.
   · Transferencia/Depósito — Banco Provincial · Cuenta: 0108-0377-20-0100049415.
@@ -119,7 +119,7 @@ const tools: ChatCompletionTool[] = [
 
 async function toolConsultarAtleta(ci: string): Promise<string> {
   const res = await pool.query(
-    "SELECT full_name, route, payment_status, bib_number, jersey_size FROM athletes WHERE ci = $1",
+    "SELECT full_name, route, payment_status, bib_number, jersey_cut, jersey_size FROM athletes WHERE ci = $1",
     [ci.trim()],
   );
   if (res.rows.length === 0) return `No encontré ninguna inscripción con la cédula ${ci}.`;
@@ -130,6 +130,7 @@ async function toolConsultarAtleta(ci: string): Promise<string> {
     ruta: ROUTE_LABELS[a.route] ?? a.route,
     estatusPago: a.payment_status,
     dorsal: a.bib_number ?? "Sin asignar (se asigna en el check-in)",
+    corte: a.jersey_cut,
     talla: a.jersey_size,
   });
 }
@@ -145,17 +146,21 @@ async function toolInfoEvento(): Promise<string> {
         nombre: "Reto Completo 33K",
         salida: "Redoma de Trujillo",
         meta: "Monumento Virgen de la Paz (46,72 m)",
-        precioUsd: 25,
+        precioUsd: 30,
       },
       {
         nombre: "Reto Medio 22K",
         salida: "Parque Los Ilustres",
         meta: "Monumento Virgen de la Paz (46,72 m)",
-        precioUsd: 25,
+        precioUsd: 30,
       },
     ],
     hidratacion: ["Km 8 — 1er punto de hidratación", "Km 20 — 2do punto de hidratación"],
-    kit: ["Medalla conmemorativa troquelada", "Dorsal numerado", "Jersey oficial de finisher (manga larga, tallas S-XXL)"],
+    kit: [
+      "Medalla conmemorativa troquelada",
+      "Dorsal numerado",
+      "Jersey oficial de finisher (manga larga) — corte Caballero (tallas S-XXL) o corte Dama (tallas XS-XL)",
+    ],
     entregaKit: "El día del evento en el paddock, presentando el QR del certificado.",
     metodosPago: ["Pago Móvil", "Transferencia/Depósito"],
     datosPago: {
@@ -184,7 +189,7 @@ async function toolInfoEvento(): Promise<string> {
 
 async function toolReenviarCertificado(ci: string): Promise<string> {
   const res = await pool.query(
-    "SELECT id, full_name, ci, route, jersey_size, bib_number, qr_token, email, payment_status FROM athletes WHERE ci = $1",
+    "SELECT id, full_name, ci, route, jersey_cut, jersey_size, bib_number, qr_token, email, payment_status FROM athletes WHERE ci = $1",
     [ci.trim()],
   );
   if (res.rows.length === 0) return `No encontré ninguna inscripción con la cédula ${ci}.`;
@@ -200,6 +205,7 @@ async function toolReenviarCertificado(ci: string): Promise<string> {
     fullName: a.full_name,
     ci: a.ci,
     route: a.route,
+    jerseyCut: a.jersey_cut,
     jerseySize: a.jersey_size,
     bibNumber: a.bib_number,
     qrToken: a.qr_token,
@@ -289,7 +295,7 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
     try {
       const data = JSON.parse(result);
       return {
-        reply: `Hola ${data.nombre} 👋. Tu inscripción: ruta ${data.ruta}, talla ${data.talla}, estatus de pago ${data.estatusPago}, dorsal ${data.dorsal}.`,
+        reply: `Hola ${data.nombre} 👋. Tu inscripción: ruta ${data.ruta}, talla ${data.talla} (${data.corte}), estatus de pago ${data.estatusPago}, dorsal ${data.dorsal}.`,
         toolCalls,
       };
     } catch {
@@ -297,7 +303,11 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
     }
   }
 
-  if (/hidrataci|horario|paddock|evento|tasa|bcv|salida|meta|precio|cu[aá]nto (cuesta|vale)|fecha|kit|jersey|franela|medalla/.test(lower)) {
+  if (
+    /hidrataci|horario|paddock|evento|tasa|bcv|salida|meta|precio|cu[aá]nto (cuesta|vale)|fecha|kit|jersey|franela|medalla|dama|caballero|corte|talla/.test(
+      lower,
+    )
+  ) {
     const result = await toolInfoEvento();
     toolCalls.push({ name: "info_evento", result });
     const info = JSON.parse(result);

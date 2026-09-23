@@ -8,7 +8,7 @@ CREATE TABLE IF NOT EXISTS athletes (
   emergency_contact VARCHAR(100) NOT NULL,
   blood_type VARCHAR(10) NOT NULL,
   route VARCHAR(20) NOT NULL, -- '33K_REDOMA' | '22K_ILUSTRES'
-  jersey_size VARCHAR(10) NOT NULL, -- 'S', 'M', 'L', 'XL', 'XXL'
+  jersey_size VARCHAR(10) NOT NULL, -- caballero: 'S','M','L','XL','XXL' · dama: 'XS','S','M','L','XL'
   payment_status VARCHAR(20) DEFAULT 'PENDING_REVIEW', -- 'PENDING_REVIEW' | 'PARTIAL' | 'PAID' | 'REJECTED'
   total_amount_usd NUMERIC(8, 2) NOT NULL,
   bib_number INT UNIQUE NULL,
@@ -21,6 +21,11 @@ CREATE TABLE IF NOT EXISTS athletes (
 -- CREATE TABLE IF NOT EXISTS no altera tablas ya existentes, así que el nuevo
 -- campo de un despliegue previo se agrega aparte con ADD COLUMN IF NOT EXISTS.
 ALTER TABLE athletes ADD COLUMN IF NOT EXISTS email VARCHAR(150) NULL;
+
+-- Corte del jersey ('caballero' | 'dama'), agregado junto a jersey_size para separar
+-- el rango de tallas de dama (XS-XL) del de caballero (S-XXL). Default 'caballero'
+-- para que las inscripciones existentes (todas previas a este campo) queden consistentes.
+ALTER TABLE athletes ADD COLUMN IF NOT EXISTS jersey_cut VARCHAR(20) NOT NULL DEFAULT 'caballero';
 
 CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),

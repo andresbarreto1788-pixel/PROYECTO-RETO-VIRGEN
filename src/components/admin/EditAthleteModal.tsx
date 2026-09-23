@@ -2,11 +2,11 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { ApiError, adminPatch } from "../../lib/api";
+import { JERSEY_CUTS, JERSEY_SIZES_BY_CUT } from "../../data/raceData";
 import type { Athlete, AthleteRoute } from "../../types/admin";
-import type { BloodType, JerseySize } from "../../types/race";
+import type { BloodType, JerseyCut, JerseySize } from "../../types/race";
 
 const BLOOD_TYPES: BloodType[] = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
-const JERSEY_SIZES: JerseySize[] = ["S", "M", "L", "XL", "XXL"];
 
 const inputClass =
   "mt-1 w-full rounded-lg border border-brand-card-border bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-brand-neon";
@@ -25,9 +25,18 @@ export function EditAthleteModal({ athlete, onClose, onSaved }: EditAthleteModal
   const [emergencyContact, setEmergencyContact] = useState(athlete.emergencyContact);
   const [bloodType, setBloodType] = useState<BloodType>(athlete.bloodType);
   const [route, setRoute] = useState<AthleteRoute>(athlete.route);
+  const [jerseyCut, setJerseyCut] = useState<JerseyCut>(athlete.jerseyCut);
   const [jerseySize, setJerseySize] = useState<JerseySize>(athlete.jerseySize);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const jerseySizes = JERSEY_SIZES_BY_CUT[jerseyCut];
+
+  function handleJerseyCutChange(next: JerseyCut) {
+    setJerseyCut(next);
+    if (!JERSEY_SIZES_BY_CUT[next].includes(jerseySize)) {
+      setJerseySize(JERSEY_SIZES_BY_CUT[next][1] as JerseySize);
+    }
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -41,6 +50,7 @@ export function EditAthleteModal({ athlete, onClose, onSaved }: EditAthleteModal
         emergencyContact,
         bloodType,
         route,
+        jerseyCut,
         jerseySize,
       });
       onSaved();
@@ -90,7 +100,7 @@ export function EditAthleteModal({ athlete, onClose, onSaved }: EditAthleteModal
             />
           </label>
 
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3">
             <label className={labelClass}>
               Sangre
               <select className={inputClass} value={bloodType} onChange={(e) => setBloodType(e.target.value as BloodType)}>
@@ -109,9 +119,23 @@ export function EditAthleteModal({ athlete, onClose, onSaved }: EditAthleteModal
               </select>
             </label>
             <label className={labelClass}>
+              Corte
+              <select
+                className={inputClass}
+                value={jerseyCut}
+                onChange={(e) => handleJerseyCutChange(e.target.value as JerseyCut)}
+              >
+                {JERSEY_CUTS.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className={labelClass}>
               Talla
               <select className={inputClass} value={jerseySize} onChange={(e) => setJerseySize(e.target.value as JerseySize)}>
-                {JERSEY_SIZES.map((size) => (
+                {jerseySizes.map((size) => (
                   <option key={size} value={size}>
                     {size}
                   </option>

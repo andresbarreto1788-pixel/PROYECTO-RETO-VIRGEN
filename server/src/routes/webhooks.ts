@@ -192,7 +192,7 @@ webhooksRouter.post("/webhooks/whatsapp", async (req, res) => {
             },
             onCertificateReady: async (ci) => {
               const athleteRes = await pool.query(
-                "SELECT id, full_name, ci, route, jersey_size, bib_number, qr_token, email, payment_status FROM athletes WHERE ci = $1",
+                "SELECT id, full_name, ci, route, jersey_cut, jersey_size, bib_number, qr_token, email, payment_status FROM athletes WHERE ci = $1",
                 [ci.trim()],
               );
               if (athleteRes.rows.length === 0) return;
@@ -204,6 +204,7 @@ webhooksRouter.post("/webhooks/whatsapp", async (req, res) => {
                 fullName: a.full_name,
                 ci: a.ci,
                 route: a.route,
+                jerseyCut: a.jersey_cut,
                 jerseySize: a.jersey_size,
                 bibNumber: a.bib_number,
                 qrToken: a.qr_token,

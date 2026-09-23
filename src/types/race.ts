@@ -10,7 +10,9 @@ export interface RouteModality {
   priceUsd: number;
 }
 
-export type JerseySize = "S" | "M" | "L" | "XL" | "XXL";
+export type JerseyCut = "caballero" | "dama";
+
+export type JerseySize = "XS" | "S" | "M" | "L" | "XL" | "XXL";
 
 export type BloodType = "O+" | "O-" | "A+" | "A-" | "B+" | "B-" | "AB+" | "AB-";
 
@@ -52,6 +54,7 @@ export interface RegistrationData {
   emergencyContact: string;
   bloodType: BloodType;
   modality: RouteModalityId;
+  jerseyCut: JerseyCut;
   jerseySize: JerseySize;
   paymentMethod: PaymentMethod;
   paymentReference: string;

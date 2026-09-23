@@ -95,11 +95,17 @@ const ROUTE_LABELS: Record<string, string> = {
   "22K_ILUSTRES": "22K · Ilustres",
 };
 
+const JERSEY_CUT_LABELS: Record<string, string> = {
+  caballero: "Caballero",
+  dama: "Dama",
+};
+
 export interface AthleteCertificateData {
   athleteId: string;
   fullName: string;
   ci: string;
   route: string;
+  jerseyCut: string;
   jerseySize: string;
   bibNumber: number | null;
   qrToken: string;
@@ -264,10 +270,12 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
     const routeLabel = ROUTE_LABELS[athlete.route] ?? athlete.route;
     const bibLabel = athlete.bibNumber != null ? String(athlete.bibNumber) : "Sin asignar";
 
+    const cutLabel = JERSEY_CUT_LABELS[athlete.jerseyCut] ?? athlete.jerseyCut;
+
     const columns = [
       { label: "CÉDULA", value: athlete.ci },
       { label: "MODALIDAD", value: routeLabel },
-      { label: "TALLA DE FRANELA", value: athlete.jerseySize },
+      { label: "TALLA DE FRANELA", value: `${athlete.jerseySize} · ${cutLabel}` },
       { label: "DORSAL", value: bibLabel },
     ];
 

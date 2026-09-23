@@ -6,6 +6,11 @@ const ROUTE_LABELS: Record<string, string> = {
   "22K_ILUSTRES": "22K · Ilustres",
 };
 
+const JERSEY_CUT_LABELS: Record<string, string> = {
+  caballero: "Caballero",
+  dama: "Dama",
+};
+
 const CERTIFICATE_FILENAME = "Certificado-Reto-Virgen-de-la-Paz.pdf";
 const EMAIL_SUBJECT = "¡Inscripción Confirmada! Pase Oficial - Reto Virgen de la Paz 2027";
 
@@ -41,7 +46,7 @@ function buildEmailHtml(athlete: AthleteCertificateData): string {
                   </tr>
                   <tr>
                     <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);color:#94A3B8;font-size:12px;text-transform:uppercase;">Talla de franela</td>
-                    <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);text-align:right;font-weight:bold;">${athlete.jerseySize}</td>
+                    <td style="padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.1);text-align:right;font-weight:bold;">${athlete.jerseySize} · ${JERSEY_CUT_LABELS[athlete.jerseyCut] ?? athlete.jerseyCut}</td>
                   </tr>
                   <tr>
                     <td style="padding:8px 0;color:#94A3B8;font-size:12px;text-transform:uppercase;">Dorsal</td>
@@ -72,7 +77,7 @@ function buildEmailText(athlete: AthleteCertificateData): string {
     "Tu inscripción ha sido confirmada con pago completo. Adjunto encontrarás tu certificado oficial de participación con el código QR que debes presentar el día del evento en el paddock para retirar tu kit.",
     "",
     `Modalidad: ${routeLabel}`,
-    `Talla de franela: ${athlete.jerseySize}`,
+    `Talla de franela: ${athlete.jerseySize} · ${JERSEY_CUT_LABELS[athlete.jerseyCut] ?? athlete.jerseyCut}`,
     `Dorsal: ${bibLabel}`,
     "",
     "Presenta el QR de tu certificado (impreso o desde tu celular) en el paddock antes de la salida. ¡Nos vemos en la meta!",

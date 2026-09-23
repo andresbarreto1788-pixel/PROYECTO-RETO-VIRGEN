@@ -1,11 +1,19 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { JERSEY_SIZES, ROUTE_MODALITIES } from "../data/raceData";
+import { JERSEY_CUTS, JERSEY_SIZES_BY_CUT, ROUTE_MODALITIES } from "../data/raceData";
 import { formatBs, formatUsd, generateRegistrationId } from "../lib/format";
 import { apiPost, ApiError } from "../lib/api";
 import { PaymentProofUploader } from "./PaymentProofUploader";
 import type { Athlete } from "../types/admin";
-import type { BloodType, JerseySize, PaymentMethod, PaymentPlan, RegistrationData, RouteModalityId } from "../types/race";
+import type {
+  BloodType,
+  JerseyCut,
+  JerseySize,
+  PaymentMethod,
+  PaymentPlan,
+  RegistrationData,
+  RouteModalityId,
+} from "../types/race";
 
 const BLOOD_TYPES: BloodType[] = ["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"];
 const MIN_PARTIAL_RATIO = 0.5;
@@ -33,7 +41,16 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
   const [emergencyContact, setEmergencyContact] = useState("");
   const [bloodType, setBloodType] = useState<BloodType>("O+");
   const [modality, setModality] = useState<RouteModalityId>(ROUTE_MODALITIES[0].id);
+  const [jerseyCut, setJerseyCut] = useState<JerseyCut>("caballero");
   const [jerseySize, setJerseySize] = useState<JerseySize>("M");
+  const jerseySizes = JERSEY_SIZES_BY_CUT[jerseyCut];
+
+  function handleJerseyCutChange(next: JerseyCut) {
+    setJerseyCut(next);
+    if (!JERSEY_SIZES_BY_CUT[next].includes(jerseySize)) {
+      setJerseySize(JERSEY_SIZES_BY_CUT[next][1] as JerseySize);
+    }
+  }
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("pago-movil");
   const [paymentReference, setPaymentReference] = useState("");
   const [paymentPlan, setPaymentPlan] = useState<PaymentPlan>("full");
@@ -88,6 +105,7 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
     formData.set("emergencyContact", emergencyContact);
     formData.set("bloodType", bloodType);
     formData.set("modality", modality);
+    formData.set("jerseyCut", jerseyCut);
     formData.set("jerseySize", jerseySize);
     formData.set("paymentMethod", paymentMethod);
     formData.set("paymentReference", paymentReference);
@@ -111,6 +129,7 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
         emergencyContact,
         bloodType,
         modality,
+        jerseyCut,
         jerseySize,
         paymentMethod,
         paymentReference,
@@ -219,13 +238,33 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
       </div>
 
       <div>
+        <span className={labelClass}>Corte de jersey</span>
+        <div className="grid grid-cols-2 gap-2">
+          {JERSEY_CUTS.map((c) => (
+            <button
+              type="button"
+              key={c.id}
+              onClick={() => handleJerseyCutChange(c.id)}
+              className={`rounded-lg border py-2.5 text-center text-xs font-bold uppercase transition-colors ${
+                jerseyCut === c.id
+                  ? "border-brand-neon bg-brand-neon/10 text-brand-neon"
+                  : "border-brand-card-border bg-surface text-ink-muted hover:border-ink-muted"
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
         <span className={labelClass}>Talla de jersey (para el kit)</span>
         <div className="grid grid-cols-5 gap-2">
-          {JERSEY_SIZES.map((size) => (
+          {jerseySizes.map((size) => (
             <button
               type="button"
               key={size}
-              onClick={() => setJerseySize(size)}
+              onClick={() => setJerseySize(size as JerseySize)}
               className={`rounded-lg border py-2.5 text-center text-xs font-bold uppercase transition-colors ${
                 jerseySize === size
                   ? "border-brand-neon bg-brand-neon/10 text-brand-neon"

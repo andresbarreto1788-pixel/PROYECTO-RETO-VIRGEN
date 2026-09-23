@@ -204,7 +204,9 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
                     <div className="text-ink-muted">{athlete.ci}</div>
                   </td>
                   <td className="px-3 py-2.5 text-ink-muted">{athlete.route === "33K_REDOMA" ? "33K" : "22K"}</td>
-                  <td className="px-3 py-2.5 text-ink-muted">{athlete.jerseySize}</td>
+                  <td className="px-3 py-2.5 text-ink-muted">
+                    {athlete.jerseySize} <span className="text-[10px] uppercase">({athlete.jerseyCut})</span>
+                  </td>
                   <td className="px-3 py-2.5">
                     <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest ${STATUS_STYLES[athlete.paymentStatus]}`}>
                       {STATUS_LABELS[athlete.paymentStatus]}

@@ -118,6 +118,9 @@ export function QrScannerPanel({ onCheckedIn }: { onCheckedIn: () => void }) {
 
           <p className="mt-6 text-[10px] uppercase tracking-widest text-ink-muted">Talla de franela a entregar</p>
           <p className="text-6xl font-black text-brand-neon">{preview.jerseySize}</p>
+          <p className="mt-1 text-sm font-bold uppercase tracking-widest text-ink-muted">
+            Corte {preview.jerseyCut === "dama" ? "Dama" : "Caballero"}
+          </p>
 
           {preview.checkedIn ? (
             <p className="mt-6 inline-flex items-center gap-2 rounded-full bg-brand-blue/15 px-4 py-2 text-xs font-bold uppercase tracking-widest text-brand-blue">

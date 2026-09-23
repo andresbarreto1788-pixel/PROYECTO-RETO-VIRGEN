@@ -1,4 +1,4 @@
-import { EVENT, ROUTE_MODALITIES } from "../data/raceData";
+import { EVENT, JERSEY_CUTS, ROUTE_MODALITIES } from "../data/raceData";
 import { formatBs, formatUsd } from "./format";
 import type { RegistrationData } from "../types/race";
 
@@ -6,6 +6,7 @@ export function buildRegistrationWhatsAppLink(data: RegistrationData): string {
   const route = ROUTE_MODALITIES.find((m) => m.id === data.modality);
   const modalityLabel = route ? `${route.distanceKm} KM — Salida ${route.startPoint}` : data.modality;
   const paymentLabel = data.paymentMethod === "pago-movil" ? "Pago Móvil" : "Transferencia";
+  const cutLabel = JERSEY_CUTS.find((c) => c.id === data.jerseyCut)?.label ?? data.jerseyCut;
 
   const planLabel = data.paymentPlan === "full" ? "Pago Completo (100%)" : "Pago por Cuotas";
 
@@ -19,7 +20,7 @@ export function buildRegistrationWhatsAppLink(data: RegistrationData): string {
     `Contacto de emergencia: ${data.emergencyContact}`,
     `Grupo sanguíneo: ${data.bloodType}`,
     `Modalidad: ${modalityLabel}`,
-    `Talla de jersey: ${data.jerseySize}`,
+    `Talla de jersey: ${data.jerseySize} (${cutLabel})`,
     ``,
     `Monto total: ${formatUsd(data.amountUsd)} (${formatBs(data.amountBs)} · tasa ${data.bcvRate})`,
     `Modalidad de pago: ${planLabel}`,

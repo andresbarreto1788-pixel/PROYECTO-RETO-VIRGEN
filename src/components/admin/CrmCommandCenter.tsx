@@ -1,11 +1,10 @@
 import { CheckCircle2, FileText, Receipt, Search, StickyNote } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError, adminGet, adminPatch, adminPost } from "../../lib/api";
+import { JERSEY_CUTS, JERSEY_SIZES_BY_CUT } from "../../data/raceData";
 import type { Athlete } from "../../types/admin";
 import type { Conversation, PaymentStatus } from "../../types/admin";
-import type { JerseySize } from "../../types/race";
-
-const JERSEY_SIZES: JerseySize[] = ["S", "M", "L", "XL", "XXL"];
+import type { JerseyCut, JerseySize } from "../../types/race";
 
 const STATUS_LABELS: Record<PaymentStatus, string> = {
   PAID: "Solvente",
@@ -170,6 +169,26 @@ function LinkedAthletePanel({
     setNotesDraft(conversation.internalNotes ?? "");
   }, [conversation.id, conversation.internalNotes]);
 
+  async function handleJerseyCutChange(cut: JerseyCut) {
+    if (!athlete) return;
+    setSavingSize(true);
+    setError(null);
+    try {
+      const nextSize = JERSEY_SIZES_BY_CUT[cut].includes(athlete.jerseySize)
+        ? athlete.jerseySize
+        : (JERSEY_SIZES_BY_CUT[cut][1] as JerseySize);
+      const res = await adminPatch<{ athlete: Athlete }>(`/api/admin/athletes/${athlete.id}`, {
+        jerseyCut: cut,
+        jerseySize: nextSize,
+      });
+      setAthlete(res.athlete);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo actualizar el corte.");
+    } finally {
+      setSavingSize(false);
+    }
+  }
+
   async function handleJerseySizeChange(size: JerseySize) {
     if (!athlete) return;
     setSavingSize(true);
@@ -268,6 +287,22 @@ function LinkedAthletePanel({
       </div>
 
       <label className={labelClass}>
+        Corte de franela
+        <select
+          className={inputClass}
+          value={athlete.jerseyCut}
+          disabled={savingSize}
+          onChange={(e) => handleJerseyCutChange(e.target.value as JerseyCut)}
+        >
+          {JERSEY_CUTS.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className={labelClass}>
         Talla de franela
         <select
           className={inputClass}
@@ -275,7 +310,7 @@ function LinkedAthletePanel({
           disabled={savingSize}
           onChange={(e) => handleJerseySizeChange(e.target.value as JerseySize)}
         >
-          {JERSEY_SIZES.map((size) => (
+          {JERSEY_SIZES_BY_CUT[athlete.jerseyCut].map((size) => (
             <option key={size} value={size}>
               {size}
             </option>

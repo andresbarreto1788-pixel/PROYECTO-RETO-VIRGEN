@@ -1,6 +1,6 @@
 import { CheckCircle2, Download, MessageCircle, RotateCcw } from "lucide-react";
 import { useRef, useState } from "react";
-import { EVENT, ROUTE_MODALITIES } from "../data/raceData";
+import { EVENT, JERSEY_CUTS, ROUTE_MODALITIES } from "../data/raceData";
 import { formatBs, formatUsd } from "../lib/format";
 import { buildRegistrationWhatsAppLink } from "../lib/whatsapp";
 import type { RegistrationData } from "../types/race";
@@ -16,6 +16,7 @@ export function ProofCard({ data, qrDataUrl, onReset }: ProofCardProps) {
   const [downloading, setDownloading] = useState(false);
   const route = ROUTE_MODALITIES.find((m) => m.id === data.modality);
   const modalityLabel = route ? `${route.distanceKm} KM — ${route.startPoint}` : data.modality;
+  const cutLabel = JERSEY_CUTS.find((c) => c.id === data.jerseyCut)?.label ?? data.jerseyCut;
   const isFullyPaid = data.paymentPlan === "full";
 
   async function handleDownload() {
@@ -83,7 +84,7 @@ export function ProofCard({ data, qrDataUrl, onReset }: ProofCardProps) {
             <Row label="Nombre" value={data.fullName} />
             <Row label="Cédula/Pasaporte" value={data.idNumber} />
             <Row label="Modalidad" value={modalityLabel} />
-            <Row label="Talla de jersey" value={data.jerseySize} />
+            <Row label="Talla de jersey" value={`${data.jerseySize} (${cutLabel})`} />
             <Row label="Grupo sanguíneo" value={data.bloodType} />
             <Row label="Monto total" value={`${formatUsd(data.amountUsd)} · ${formatBs(data.amountBs)}`} />
             {!isFullyPaid && (

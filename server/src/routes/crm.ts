@@ -23,6 +23,7 @@ const CONVERSATION_SELECT = `
     a.full_name AS athlete_full_name,
     a.ci AS athlete_ci,
     a.route AS athlete_route,
+    a.jersey_cut AS athlete_jersey_cut,
     a.jersey_size AS athlete_jersey_size,
     a.payment_status AS athlete_payment_status,
     a.bib_number AS athlete_bib_number,
@@ -190,7 +191,7 @@ crmRouter.post("/conversations/:id/resend-certificate", requireAdmin, async (req
   const { id } = req.params;
 
   const athleteRes = await pool.query(
-    `SELECT a.id, a.full_name, a.ci, a.phone, a.route, a.jersey_size, a.bib_number, a.qr_token, a.email, a.payment_status
+    `SELECT a.id, a.full_name, a.ci, a.phone, a.route, a.jersey_cut, a.jersey_size, a.bib_number, a.qr_token, a.email, a.payment_status
      FROM conversations c
      JOIN athletes a ON a.id = c.athlete_id
      WHERE c.id = $1`,
@@ -214,6 +215,7 @@ crmRouter.post("/conversations/:id/resend-certificate", requireAdmin, async (req
       fullName: athlete.full_name,
       ci: athlete.ci,
       route: athlete.route,
+      jerseyCut: athlete.jersey_cut,
       jerseySize: athlete.jersey_size,
       bibNumber: athlete.bib_number,
       qrToken: athlete.qr_token,
@@ -228,6 +230,7 @@ crmRouter.post("/conversations/:id/resend-certificate", requireAdmin, async (req
       fullName: athlete.full_name,
       ci: athlete.ci,
       route: athlete.route,
+      jerseyCut: athlete.jersey_cut,
       jerseySize: athlete.jersey_size,
       bibNumber: athlete.bib_number,
       qrToken: athlete.qr_token,

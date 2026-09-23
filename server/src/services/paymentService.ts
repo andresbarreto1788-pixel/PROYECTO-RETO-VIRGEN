@@ -90,6 +90,7 @@ export async function approveFullPaymentAndAssignBib(athleteId: string): Promise
         fullName: athlete.full_name,
         ci: athlete.ci,
         route: athlete.route,
+        jerseyCut: athlete.jersey_cut,
         jerseySize: athlete.jersey_size,
         bibNumber: athlete.bib_number,
         qrToken: athlete.qr_token,

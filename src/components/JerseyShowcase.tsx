@@ -1,13 +1,20 @@
 import { motion } from "framer-motion";
 import { useState } from "react";
-import { JERSEY_IMAGES, JERSEY_SIZES, KIT_ITEMS } from "../data/raceData";
-import type { JerseySize } from "../types/race";
+import { JERSEY_CUTS, JERSEY_IMAGES, JERSEY_SIZES_BY_CUT, KIT_ITEMS } from "../data/raceData";
+import type { JerseyCut, JerseySize } from "../types/race";
 import { ExpandableImage } from "./ui/ExpandableImage";
 
 const jersey = KIT_ITEMS.find((item) => item.id === "jersey")!;
 
 export function JerseyShowcase() {
+  const [cut, setCut] = useState<JerseyCut>("caballero");
   const [size, setSize] = useState<JerseySize>("M");
+  const sizes = JERSEY_SIZES_BY_CUT[cut];
+
+  function handleCutChange(next: JerseyCut) {
+    setCut(next);
+    setSize(JERSEY_SIZES_BY_CUT[next].includes(size) ? size : (JERSEY_SIZES_BY_CUT[next][1] as JerseySize));
+  }
 
   return (
     <motion.div
@@ -42,15 +49,35 @@ export function JerseyShowcase() {
         <p className="mt-4 text-sm leading-relaxed text-ink-muted sm:text-base">{jersey.description}</p>
 
         <div className="mt-6">
+          <span className="mb-2 block text-[10px] uppercase tracking-widest text-ink-muted">Corte</span>
+          <div className="flex flex-wrap gap-2">
+            {JERSEY_CUTS.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => handleCutChange(c.id)}
+                className={`h-11 rounded-lg border px-5 text-sm font-bold uppercase transition-colors ${
+                  cut === c.id
+                    ? "border-brand-neon bg-brand-neon/10 text-brand-neon"
+                    : "border-brand-card-border bg-surface text-ink-muted hover:border-ink-muted"
+                }`}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-4">
           <span className="mb-2 block text-[10px] uppercase tracking-widest text-ink-muted">
             Talla — seleccionable también al inscribirte
           </span>
           <div className="flex flex-wrap gap-2">
-            {JERSEY_SIZES.map((s) => (
+            {sizes.map((s) => (
               <button
                 key={s}
                 type="button"
-                onClick={() => setSize(s)}
+                onClick={() => setSize(s as JerseySize)}
                 className={`h-11 w-14 rounded-lg border text-sm font-bold uppercase transition-colors ${
                   size === s
                     ? "border-brand-neon bg-brand-neon/10 text-brand-neon"

@@ -1,4 +1,4 @@
-import type { ElevationPoint, KitItem, RacePhase, RouteModality, Sponsor } from "../types/race";
+import type { ElevationPoint, JerseyCut, KitItem, RacePhase, RouteModality, Sponsor } from "../types/race";
 
 export const EVENT = {
   edition: "5ta Edición",
@@ -82,7 +82,7 @@ export const ROUTE_MODALITIES: RouteModality[] = [
     startPoint: "Redoma de Trujillo",
     finishPoint: "Monumento Virgen de la Paz (46,72 m)",
     description: "El recorrido completo, de redoma a cumbre. Paseo / cicloturismo: cada quien a su propio ritmo.",
-    priceUsd: 25,
+    priceUsd: 30,
   },
   {
     id: "reto-22k",
@@ -91,7 +91,7 @@ export const ROUTE_MODALITIES: RouteModality[] = [
     startPoint: "Parque Los Ilustres",
     finishPoint: "Monumento Virgen de la Paz (46,72 m)",
     description: "Una salida más corta hacia la misma cumbre. Paseo / cicloturismo: cada quien a su propio ritmo.",
-    priceUsd: 25,
+    priceUsd: 30,
   },
 ];
 
@@ -121,7 +121,8 @@ export const KIT_ITEMS: KitItem[] = [
   {
     id: "jersey",
     title: "Jersey Oficial de Finisher (Manga Larga)",
-    description: "Diseño con pinos andinos y el logo oficial de la Virgen. Disponible en tallas S a XXL.",
+    description:
+      "Diseño con pinos andinos y el logo oficial de la Virgen. Disponible en corte caballero (tallas S a XXL) y corte dama (tallas XS a XL).",
     image: "/images/jersey-front.jpeg",
   },
 ];
@@ -131,7 +132,19 @@ export const JERSEY_IMAGES = {
   back: "/images/jersey-back.jpeg",
 };
 
-export const JERSEY_SIZES = ["S", "M", "L", "XL", "XXL"] as const;
+export const JERSEY_CUTS: { id: JerseyCut; label: string }[] = [
+  { id: "caballero", label: "Caballero" },
+  { id: "dama", label: "Dama" },
+];
+
+export const JERSEY_SIZES_BY_CUT: Record<JerseyCut, readonly string[]> = {
+  caballero: ["S", "M", "L", "XL", "XXL"],
+  dama: ["XS", "S", "M", "L", "XL"],
+};
+
+// Compatibilidad con el corte por defecto (caballero) para código que todavía no
+// distingue por corte.
+export const JERSEY_SIZES = JERSEY_SIZES_BY_CUT.caballero;
 
 export const SPONSORS: Sponsor[] = [
   { name: "Galanet" },
