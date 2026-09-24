@@ -1,4 +1,4 @@
-import { LogOut, MessageCircle, QrCode, Users } from "lucide-react";
+import { LogOut, MessageCircle, QrCode, Users, Users2 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { EVENT } from "../data/raceData";
 import { ADMIN_UNAUTHORIZED_EVENT, adminGet, clearAdminToken, getAdminToken } from "../lib/api";
@@ -7,9 +7,10 @@ import { AthleteTable } from "../components/admin/AthleteTable";
 import { CrmPanel } from "../components/admin/CrmPanel";
 import { MetricsHud } from "../components/admin/MetricsHud";
 import { QrScannerPanel } from "../components/admin/QrScannerPanel";
+import { TeamTable } from "../components/admin/TeamTable";
 import type { AdminMetrics } from "../types/admin";
 
-type Tab = "athletes" | "scanner" | "crm";
+type Tab = "athletes" | "teams" | "scanner" | "crm";
 
 export function AdminDashboard() {
   const [authed, setAuthed] = useState(() => Boolean(getAdminToken()));
@@ -95,6 +96,15 @@ export function AdminDashboard() {
           </button>
           <button
             type="button"
+            onClick={() => setTab("teams")}
+            className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
+              tab === "teams" ? "bg-brand-neon text-surface" : "border border-brand-card-border text-ink-muted"
+            }`}
+          >
+            <Users2 size={14} /> Equipos
+          </button>
+          <button
+            type="button"
             onClick={() => setTab("scanner")}
             className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-bold uppercase tracking-widest transition-colors ${
               tab === "scanner" ? "bg-brand-neon text-surface" : "border border-brand-card-border text-ink-muted"
@@ -114,6 +124,7 @@ export function AdminDashboard() {
         </div>
 
         {tab === "athletes" && <AthleteTable onMutated={loadMetrics} />}
+        {tab === "teams" && <TeamTable onMutated={loadMetrics} />}
         {tab === "scanner" && <QrScannerPanel onCheckedIn={loadMetrics} />}
         {tab === "crm" && <CrmPanel />}
       </div>

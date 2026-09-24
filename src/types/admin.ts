@@ -59,6 +59,54 @@ export interface AdminMetrics {
   totalRevenueBs: number;
 }
 
+// memberCount es el conteo EN VIVO de integrantes (COUNT sobre athletes); storedMemberCount
+// es el valor congelado en teams.member_count desde el registro inicial y solo sirve como
+// diagnóstico si ambos difieren (se agregaron/quitaron integrantes después).
+export interface TeamSummary {
+  id: string;
+  name: string;
+  route: AthleteRoute;
+  memberCount: number;
+  storedMemberCount: number;
+  discountPercent: number;
+  captainFullName: string;
+  captainPhone: string;
+  captainEmail: string | null;
+  subtotalAmountUsd: number;
+  totalAmountUsd: number;
+  membersTotalUsd: number;
+  paidAmountUsd: number;
+  paidMembers: number;
+  partialMembers: number;
+  pendingMembers: number;
+  rejectedMembers: number;
+  checkedInMembers: number;
+  discountEligible: boolean;
+  proofUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TeamListResponse {
+  items: TeamSummary[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
+export interface TeamDetailResponse {
+  team: TeamSummary;
+  members: Athlete[];
+}
+
+export interface TeamApprovalResult {
+  approvedCount: number;
+  alreadyPaidCount: number;
+  bibsAssigned: number;
+  certificatesQueued: number;
+  membersWithoutEmail: number;
+}
+
 export type CheckInResult =
   | {
       status: "checked_in" | "already_checked_in";
