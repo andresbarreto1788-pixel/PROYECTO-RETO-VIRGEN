@@ -239,11 +239,23 @@ adminRouter.patch("/athletes/:id", requireAdmin, validateBody(editAthleteSchema)
 
 adminRouter.delete("/athletes/:id", requireAdmin, async (req, res) => {
   const id = String(req.params.id);
-  const result = await pool.query("DELETE FROM athletes WHERE id = $1 RETURNING id", [id]);
+  const result = await pool.query("DELETE FROM athletes WHERE id = $1 RETURNING id, team_id", [id]);
   if (result.rows.length === 0) {
     res.status(404).json({ error: "Atleta no encontrado." });
     return;
   }
+
+  // Si el atleta borrado pertenecía a un equipo, el conteo guardado en teams.member_count
+  // queda desactualizado; se resincroniza aquí igual que en cada mutación del roster desde
+  // el panel de equipos (ver adminTeams.ts).
+  const teamId = result.rows[0].team_id;
+  if (teamId) {
+    await pool.query(
+      "UPDATE teams SET member_count = (SELECT COUNT(*) FROM athletes WHERE team_id = $1), updated_at = NOW() WHERE id = $1",
+      [teamId],
+    );
+  }
+
   res.status(204).send();
 });
 
