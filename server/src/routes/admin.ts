@@ -86,7 +86,7 @@ adminRouter.get("/metrics", requireAdmin, async (_req, res) => {
 
 // --- Listado de atletas -------------------------------------------------
 
-const ATHLETE_WITH_PAYMENTS_SELECT = `
+export const ATHLETE_WITH_PAYMENTS_SELECT = `
   SELECT a.*,
       t.name AS team_name,
       COALESCE(paid.paid_usd, 0) AS paid_amount_usd,
@@ -114,6 +114,10 @@ adminRouter.get("/athletes", requireAdmin, async (req, res) => {
   if (req.query.route) {
     params.push(req.query.route);
     conditions.push(`a.route = $${params.length}`);
+  }
+  if (req.query.teamId) {
+    params.push(req.query.teamId);
+    conditions.push(`a.team_id = $${params.length}`);
   }
   if (req.query.paymentStatus) {
     params.push(req.query.paymentStatus);

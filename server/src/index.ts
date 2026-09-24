@@ -14,6 +14,7 @@ import { globalLimiter } from "./middleware/rateLimit.js";
 import { UPLOADS_DIR } from "./middleware/upload.js";
 import { registerRouter } from "./routes/register.js";
 import { adminRouter } from "./routes/admin.js";
+import { adminTeamsRouter } from "./routes/adminTeams.js";
 import { crmRouter } from "./routes/crm.js";
 import { webhooksRouter } from "./routes/webhooks.js";
 
@@ -107,6 +108,7 @@ app.use(
 
 app.use("/api/register", registerRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/admin/teams", adminTeamsRouter);
 app.use("/api/admin/crm", crmRouter);
 app.use("/api", webhooksRouter);
 

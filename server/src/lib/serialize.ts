@@ -1,3 +1,5 @@
+import { TEAM_DISCOUNT_MIN_SIZE } from "./pricing.js";
+
 export function serializePayment(row: Record<string, unknown>) {
   return {
     id: row.id,
@@ -52,6 +54,30 @@ export function serializeTeam(row: Record<string, unknown>) {
     subtotalAmountUsd: Number(row.subtotal_amount_usd),
     totalAmountUsd: Number(row.total_amount_usd),
     createdAt: row.created_at,
+    updatedAt: row.updated_at ?? row.created_at,
+  };
+}
+
+// Fila de teams + los agregados en vivo sobre athletes (ver ADMIN_TEAM_LIST_SELECT en
+// adminTeams.ts). El conteo/estatus vienen de COUNT(*) sobre athletes, no de
+// teams.member_count (que solo se actualiza en el registro inicial y puede quedar
+// desactualizado si se agregan/quitan integrantes después).
+export function serializeTeamSummary(row: Record<string, unknown>) {
+  const liveMemberCount = Number(row.live_member_count ?? row.member_count ?? 0);
+  const discountPercent = Number(row.discount_percent);
+  return {
+    ...serializeTeam(row),
+    memberCount: liveMemberCount,
+    storedMemberCount: Number(row.member_count),
+    paidMembers: Number(row.paid_members ?? 0),
+    partialMembers: Number(row.partial_members ?? 0),
+    pendingMembers: Number(row.pending_members ?? 0),
+    rejectedMembers: Number(row.rejected_members ?? 0),
+    checkedInMembers: Number(row.checked_in_members ?? 0),
+    membersTotalUsd: Number(row.members_total_usd ?? 0),
+    paidAmountUsd: Number(row.paid_amount_usd ?? 0),
+    proofUrl: row.proof_url ?? null,
+    discountEligible: liveMemberCount >= TEAM_DISCOUNT_MIN_SIZE && discountPercent === 0,
   };
 }
 
