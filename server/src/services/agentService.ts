@@ -44,10 +44,14 @@ DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies):
   (El precio es único: $30 USD para ambas modalidades, 22K y 33K. Se cobra a la tasa BCV del día.)
 - Desnivel acumulado aproximado: +1200 m. Puntos de hidratación: Km 8 y Km 20.
 - Kit del atleta: medalla conmemorativa troquelada, dorsal numerado y jersey oficial de finisher manga larga (diseño con pinos andinos y el logo de la Virgen), disponible en dos cortes: Caballero (tallas S, M, L, XL, XXL) y Dama (tallas XS, S, M, L, XL). El atleta elige corte y talla al inscribirse. El kit se entrega el día del evento en el paddock, presentando el QR del certificado.
-- Pago: Pago Móvil o Transferencia/Depósito. Se puede pagar completo o en plan parcial (mínimo 50% de inicial). Datos para pagar:
+- Pago: Pago Móvil, Transferencia/Depósito, Zelle o Binance Pay. Se puede pagar completo o en plan parcial (mínimo 50% de inicial). Datos para pagar:
   · Pago Móvil — Banco: 0108 (Banco Provincial) · Cédula/RIF: 18924508 · Teléfono: 0414-0746270.
   · Transferencia/Depósito — Banco Provincial · Cuenta: 0108-0377-20-0100049415.
+  · Zelle — 812-4935873 · Titular: Jhaiderson Pacheco.
+  · Binance Pay — ID de Binance: 87916836 (usuario zero2024).
+  Todos estos métodos tienen su código QR para escanear y pagar directo desde la app, disponibles en la web en la sección de inscripción (junto al conversor USD/Bs).
 - Tasa BCV del día: consúltala siempre con la herramienta info_evento, nunca la inventes ni repitas una cifra vieja de memoria.
+- Inscripción de equipos: un capitán puede inscribir a todo su equipo (ej. "Café Flor de la Patria") de una sola vez en la web (pestaña "Equipo" en la sección de inscripción), con un solo pago combinado para todo el grupo. Equipos de 10 integrantes o más reciben 10% de descuento sobre el total. Con menos de 10 igual se pueden inscribir como equipo, solo que sin el descuento. Todo el equipo corre la misma modalidad (33K o 22K); cada integrante elige su propio corte y talla de jersey.
 - Certificado: se envía automáticamente por correo (y WhatsApp) apenas el pago queda completo (estatus PAID). Incluye un código QR único por atleta que también sirve para el check-in en el paddock el día del evento.
 - Redes y contacto: Instagram @retovirgendelapaz · WhatsApp de atención (este chat, Biker): 0422-0571234 · WhatsApp del organizador humano (Gustavo Briceño, para hablar con una persona real o validar pagos): 0414-0746270.
 - Patrocinadores: Galanet, Alcaldía de Trujillo, TODO tv, Soccer Burguer, Tetê, Henry's, Rizo Café, La Protectora Café Gourmet, CTT Turismo.
@@ -162,12 +166,21 @@ async function toolInfoEvento(): Promise<string> {
       "Jersey oficial de finisher (manga larga) — corte Caballero (tallas S-XXL) o corte Dama (tallas XS-XL)",
     ],
     entregaKit: "El día del evento en el paddock, presentando el QR del certificado.",
-    metodosPago: ["Pago Móvil", "Transferencia/Depósito"],
+    metodosPago: ["Pago Móvil", "Transferencia/Depósito", "Zelle", "Binance Pay"],
     datosPago: {
       pagoMovil: { banco: "0108 (Banco Provincial)", cedulaRif: "18924508", telefono: "0414-0746270" },
       transferencia: { banco: "Banco Provincial", cuenta: "0108-0377-20-0100049415" },
+      zelle: { telefono: "812-4935873", titular: "Jhaiderson Pacheco" },
+      binancePay: { idBinance: "87916836", usuario: "zero2024" },
+      nota: "Todos los métodos tienen su código QR para escanear en la web, sección de inscripción.",
     },
     planesPago: "Completo o parcial (mínimo 50% inicial).",
+    inscripcionEquipos: {
+      comoFunciona:
+        'Un capitán inscribe a todo el equipo de una vez en la pestaña "Equipo" de la web, con un solo pago combinado para todo el grupo.',
+      descuento: "10% de descuento para equipos de 10 integrantes o más (sobre el total). Con menos de 10 se inscriben igual, sin descuento.",
+      modalidad: "Todo el equipo corre la misma modalidad (33K o 22K); cada integrante elige su propio corte y talla de jersey.",
+    },
     paddock: "Entrega de kit y zona de arranque junto al punto de salida de cada modalidad.",
     tasaBcvHoy: bcvRate,
     instagram: "@retovirgendelapaz",
@@ -267,11 +280,47 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
     return { reply: `Entendido, te conecto con un organizador. ${result}`, toolCalls };
   }
 
+  // Métodos de pago (incluye Zelle y Binance Pay) y sus QR están en el sitio; contestamos
+  // directo en vez de escalar, ya que sí son datos confirmados.
+  if (
+    /zelle|binance|cripto|usdt|c[oó]mo (pago|puedo pagar)|m[eé]todos? de pago|formas? de pago|pago m[oó]vil|transferencia|dep[oó]sito|qr (de|para) pago/.test(
+      lower,
+    )
+  ) {
+    const result = await toolInfoEvento();
+    toolCalls.push({ name: "info_evento", result });
+    const info = JSON.parse(result);
+    return {
+      reply:
+        `💳 Métodos de pago (completo o abono mínimo 50%):\n` +
+        `• Pago Móvil — ${info.datosPago.pagoMovil.banco} · Cédula/RIF ${info.datosPago.pagoMovil.cedulaRif} · Tel ${info.datosPago.pagoMovil.telefono}\n` +
+        `• Transferencia/Depósito — ${info.datosPago.transferencia.banco} · Cuenta ${info.datosPago.transferencia.cuenta}\n` +
+        `• Zelle — ${info.datosPago.zelle.telefono} · Titular ${info.datosPago.zelle.titular}\n` +
+        `• Binance Pay — ID Binance ${info.datosPago.binancePay.idBinance} (usuario ${info.datosPago.binancePay.usuario})\n` +
+        `Todos tienen su código QR para escanear en la web, sección de inscripción.`,
+      toolCalls,
+    };
+  }
+
+  // Inscripción de equipos: descuento de grupo, no está en las preguntas genéricas de abajo.
+  if (/equipo|grupo|team\b/.test(lower)) {
+    const result = await toolInfoEvento();
+    toolCalls.push({ name: "info_evento", result });
+    const info = JSON.parse(result);
+    return {
+      reply:
+        `👥 ${info.inscripcionEquipos.comoFunciona}\n` +
+        `🎁 ${info.inscripcionEquipos.descuento}\n` +
+        `🚴 ${info.inscripcionEquipos.modalidad}`,
+      toolCalls,
+    };
+  }
+
   // Preguntas frecuentes sobre cosas que el sistema NO tiene configuradas todavía
   // (ver bloque LÍMITES del SYSTEM_PROMPT) — mejor escalar con honestidad que dejar
   // que caigan en el saludo genérico de abajo, que ignora la pregunta por completo.
   if (
-    /zelle|binance|cripto|usdt|n[uú]mero de pago m[oó]vil|cuenta (de )?pago m[oó]vil|banco (del|para el) pago|edad m[ií]nima|edad m[aá]xima|menor de edad|casco obligatorio|seguro m[eé]dico|reembolso|cancelaci[oó]n|hora (l[ií]mite|de corte)|cutoff/.test(
+    /edad m[ií]nima|edad m[aá]xima|menor de edad|casco obligatorio|seguro m[eé]dico|reembolso|cancelaci[oó]n|hora (l[ií]mite|de corte)|cutoff/.test(
       lower,
     )
   ) {
