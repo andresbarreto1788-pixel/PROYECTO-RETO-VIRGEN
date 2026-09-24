@@ -6,6 +6,13 @@ import { validateBody } from "../middleware/validate.js";
 import { registerLimiter } from "../middleware/rateLimit.js";
 import { serializeAthlete, serializeTeam } from "../lib/serialize.js";
 import * as metaWhatsAppService from "../services/metaWhatsAppService.js";
+import {
+  discountPercentForSize,
+  perMemberUsd as calcPerMemberUsd,
+  TEAM_MAX_SIZE,
+  TEAM_MIN_SIZE,
+  TEAM_PRICE_PER_MEMBER_USD,
+} from "../lib/pricing.js";
 
 export const registerRouter = Router();
 
@@ -50,19 +57,6 @@ const JERSEY_SIZES_BY_CUT: Record<string, readonly string[]> = {
   caballero: ["S", "M", "L", "XL", "XXL"],
   dama: ["XS", "S", "M", "L", "XL"],
 };
-
-// Debe mantenerse igual a ROUTE_MODALITIES[].priceUsd en src/data/raceData.ts. Se
-// recalcula aquí (en vez de confiar en el monto que manda el cliente) porque el precio
-// por integrante es la base del descuento grupal.
-const MODALITY_PRICE_USD: Record<string, number> = {
-  "reto-33k": 30,
-  "reto-22k": 30,
-};
-
-const TEAM_MIN_SIZE = 2;
-const TEAM_MAX_SIZE = 80;
-const TEAM_DISCOUNT_MIN_SIZE = 10;
-const TEAM_DISCOUNT_PERCENT = 10;
 
 const registerSchema = z
   .object({
@@ -251,13 +245,12 @@ registerRouter.post(
     }
 
     const route = MODALITY_TO_ROUTE[body.modality];
-    const pricePerMemberUsd = MODALITY_PRICE_USD[body.modality];
     const memberCount = members.length;
-    const discountPercent = memberCount >= TEAM_DISCOUNT_MIN_SIZE ? TEAM_DISCOUNT_PERCENT : 0;
-    const subtotalUsd = Math.round(pricePerMemberUsd * memberCount * 100) / 100;
+    const discountPercent = discountPercentForSize(memberCount);
+    const subtotalUsd = Math.round(TEAM_PRICE_PER_MEMBER_USD * memberCount * 100) / 100;
     const totalUsd = Math.round(subtotalUsd * (1 - discountPercent / 100) * 100) / 100;
-    const perMemberUsd = Math.round(pricePerMemberUsd * (1 - discountPercent / 100) * 100) / 100;
-    const perMemberBs = Math.round(perMemberUsd * body.bcvRate * 100) / 100;
+    const memberUsd = calcPerMemberUsd(discountPercent);
+    const memberBs = Math.round(memberUsd * body.bcvRate * 100) / 100;
     const proofUrl = `/uploads/${req.file.filename}`;
 
     const client = await pool.connect();
@@ -300,7 +293,7 @@ registerRouter.post(
             route,
             member.jerseyCut,
             member.jerseySize,
-            perMemberUsd,
+            memberUsd,
             team.id,
           ],
         );
@@ -312,8 +305,8 @@ registerRouter.post(
            VALUES ($1, $2, $3, $4, $5, $6, $7, 'PENDING')`,
           [
             athlete.id,
-            perMemberBs,
-            perMemberUsd,
+            memberBs,
+            memberUsd,
             body.bcvRate,
             body.paymentReference,
             PAYMENT_METHOD_LABEL[body.paymentMethod] ?? body.paymentMethod,
