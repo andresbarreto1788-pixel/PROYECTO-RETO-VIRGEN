@@ -27,6 +27,15 @@ const ROUTE_LABELS: Record<string, string> = {
   "22K_ILUSTRES": "22K · Ilustres",
 };
 
+// Contacto del organizador humano (Gustavo Briceño). La alerta interna a este número vía
+// metaWhatsAppService puede fallar en silencio (p. ej. si las credenciales de Meta no
+// están configuradas en el deploy) sin que nadie se entere — por eso, además de esa
+// alerta, el propio bot le da este número directo a la persona en su respuesta cada vez
+// que escala: así siempre tiene una forma de llegar a un humano aunque la alerta interna
+// no llegue.
+const ORGANIZER_WHATSAPP_DISPLAY = "+58 414-0746270";
+const EVENT_WEBSITE = "https://retovirgendelapaz.com";
+
 // Hechos estáticos del evento verificados contra el código (raceData.ts, schema.sql,
 // flyer-5ta-edicion.jpeg) al momento de escribir esto — si el evento cambia de fecha,
 // precio o kit, este bloque hay que actualizarlo a mano (no hay panel de admin para
@@ -38,6 +47,7 @@ Ayudas a los atletas por WhatsApp/Gmail a consultar su inscripción, reenviar su
 
 DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies):
 - 5ta edición — Reto Virgen de la Paz 2027. Fecha: domingo 17 de enero de 2027. Sede: Trujillo, Venezuela.
+- Sitio web oficial (inscripción individual o de equipo, pago con QR, certificado, todo desde ahí): ${EVENT_WEBSITE}
 - Modalidades:
   · Reto Completo 33K — Salida: Redoma de Trujillo · Meta: Monumento Virgen de la Paz (46,72 m de altura) · Precio: $30 USD.
   · Reto Medio 22K — Salida: Parque Los Ilustres · Meta: Monumento Virgen de la Paz · Precio: $30 USD.
@@ -49,16 +59,18 @@ DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies):
   · Transferencia/Depósito — Banco Provincial · Cuenta: 0108-0377-20-0100049415.
   · Zelle — 812-4935873 · Titular: Jhaiderson Pacheco.
   · Binance Pay — ID de Binance: 87916836 (usuario zero2024).
-  Todos estos métodos tienen su código QR para escanear y pagar directo desde la app, disponibles en la web en la sección de inscripción (junto al conversor USD/Bs).
+  Todos estos métodos tienen su código QR para escanear y pagar directo desde la app, disponibles en ${EVENT_WEBSITE} en la sección de inscripción (junto al conversor USD/Bs).
 - Tasa BCV del día: consúltala siempre con la herramienta info_evento, nunca la inventes ni repitas una cifra vieja de memoria.
 - Inscripción de equipos: un capitán puede inscribir a todo su equipo (ej. "Café Flor de la Patria") de una sola vez en la web (pestaña "Equipo" en la sección de inscripción), con un solo pago combinado para todo el grupo. Equipos de 10 integrantes o más reciben 10% de descuento sobre el total. Con menos de 10 igual se pueden inscribir como equipo, solo que sin el descuento. Todo el equipo corre la misma modalidad (33K o 22K); cada integrante elige su propio corte y talla de jersey.
 - Certificado: se envía automáticamente por correo (y WhatsApp) apenas el pago queda completo (estatus PAID). Incluye un código QR único por atleta que también sirve para el check-in en el paddock el día del evento.
-- Redes y contacto: Instagram @retovirgendelapaz · WhatsApp de atención (este chat, Biker): 0422-0571234 · WhatsApp del organizador humano (Gustavo Briceño, para hablar con una persona real o validar pagos): 0414-0746270.
+- Redes y contacto: Sitio web ${EVENT_WEBSITE} · Instagram @retovirgendelapaz · WhatsApp de atención (este chat, Biker): 0422-0571234 · WhatsApp del organizador humano (Gustavo Briceño, para hablar con una persona real o validar pagos): 0414-0746270.
 - Patrocinadores: Galanet, Alcaldía de Trujillo, TODO tv, Soccer Burguer, Tetê, Henry's, Rizo Café, La Protectora Café Gourmet, CTT Turismo.
 
 LÍMITES: no tienes información confirmada sobre edad mínima/máxima, uso obligatorio de casco u otras reglas de seguridad, política de reembolso/cancelación, ni hora límite (cutoff) de la ruta. Si preguntan algo de esto, o cualquier dato que no esté arriba ni puedas consultar con una herramienta, dilo con honestidad ("no tengo ese dato confirmado") y usa escalar_a_humano en vez de adivinar.
 
-Responde siempre en español, breve y cálido. Usa las herramientas disponibles para datos de inscripción, certificado y tasa del día — nunca los inventes. Si el atleta pide hablar con una persona real, usa la herramienta escalar_a_humano.`;
+Responde siempre en español, breve y cálido. Usa las herramientas disponibles para datos de inscripción, certificado y tasa del día — nunca los inventes. Si el atleta pide hablar con una persona real, usa la herramienta escalar_a_humano.
+
+IMPORTANTE sobre escalar_a_humano: la alerta interna que le llega a Gustavo por este medio puede fallar sin que nadie lo note, así que NUNCA dejes a la persona solo con un "te voy a conectar" sin más. Cada vez que uses escalar_a_humano, tu respuesta final SIEMPRE debe incluir explícitamente el número de WhatsApp de Gustavo Briceño (+58 414-0746270) para que la persona pueda escribirle directo ella misma — el resultado de la herramienta ya trae ese número, inclúyelo tal cual en tu respuesta, no lo omitas ni lo resumas como "te contactará un organizador".`;
 
 export interface AgentToolLogEntry {
   name: string;
@@ -145,6 +157,7 @@ async function toolInfoEvento(): Promise<string> {
     edicion: "5ta edición — Reto Virgen de la Paz 2027",
     fecha: "Domingo 17 de enero de 2027",
     sede: "Trujillo, Venezuela",
+    sitioWeb: EVENT_WEBSITE,
     modalidades: [
       {
         nombre: "Reto Completo 33K",
@@ -172,7 +185,7 @@ async function toolInfoEvento(): Promise<string> {
       transferencia: { banco: "Banco Provincial", cuenta: "0108-0377-20-0100049415" },
       zelle: { telefono: "812-4935873", titular: "Jhaiderson Pacheco" },
       binancePay: { idBinance: "87916836", usuario: "zero2024" },
-      nota: "Todos los métodos tienen su código QR para escanear en la web, sección de inscripción.",
+      nota: `Todos los métodos tienen su código QR para escanear en ${EVENT_WEBSITE}, sección de inscripción.`,
     },
     planesPago: "Completo o parcial (mínimo 50% inicial).",
     inscripcionEquipos: {
@@ -244,7 +257,10 @@ async function toolEscalarAHumano(conversationId: string): Promise<string> {
     );
   }
 
-  return "Conversación transferida a un organizador humano. El bot queda en pausa.";
+  return (
+    `Te comparto el contacto directo de Gustavo Briceño, el organizador del evento: WhatsApp ${ORGANIZER_WHATSAPP_DISPLAY}. ` +
+    `Escríbele por ahí para que te atienda en persona — mientras tanto el bot queda en pausa en este chat.`
+  );
 }
 
 async function executeTool(name: string, args: Record<string, unknown>, conversationId: string): Promise<string> {
@@ -277,7 +293,7 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
   if (/humano|asesor|organizador|con (una persona|alguien)/.test(lower)) {
     const result = await toolEscalarAHumano(conversationId);
     toolCalls.push({ name: "escalar_a_humano", result });
-    return { reply: `Entendido, te conecto con un organizador. ${result}`, toolCalls };
+    return { reply: `¡Claro! ${result}`, toolCalls };
   }
 
   // Métodos de pago (incluye Zelle y Binance Pay) y sus QR están en el sitio; contestamos
@@ -297,7 +313,7 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
         `• Transferencia/Depósito — ${info.datosPago.transferencia.banco} · Cuenta ${info.datosPago.transferencia.cuenta}\n` +
         `• Zelle — ${info.datosPago.zelle.telefono} · Titular ${info.datosPago.zelle.titular}\n` +
         `• Binance Pay — ID Binance ${info.datosPago.binancePay.idBinance} (usuario ${info.datosPago.binancePay.usuario})\n` +
-        `Todos tienen su código QR para escanear en la web, sección de inscripción.`,
+        `Todos tienen su código QR para escanear en ${info.sitioWeb}, sección de inscripción.`,
       toolCalls,
     };
   }
@@ -311,7 +327,8 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
       reply:
         `👥 ${info.inscripcionEquipos.comoFunciona}\n` +
         `🎁 ${info.inscripcionEquipos.descuento}\n` +
-        `🚴 ${info.inscripcionEquipos.modalidad}`,
+        `🚴 ${info.inscripcionEquipos.modalidad}\n` +
+        `🌐 Inscríbelos en ${info.sitioWeb}`,
       toolCalls,
     };
   }
@@ -327,7 +344,7 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
     const result = await toolEscalarAHumano(conversationId);
     toolCalls.push({ name: "escalar_a_humano", result });
     return {
-      reply: `No tengo ese dato confirmado todavía, para no darte información incorrecta te conecto con un organizador. ${result}`,
+      reply: `No tengo ese dato confirmado todavía, para no darte información incorrecta. ${result}`,
       toolCalls,
     };
   }
@@ -364,14 +381,16 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
     return {
       reply:
         `🚴 ${info.edicion}\n📅 ${info.fecha} — ${info.sede}\n💵 ${precios}\n` +
-        `🎁 Kit: ${info.kit.join(", ")}\n📍 Hidratación: ${info.hidratacion.join(", ")}\n💱 Tasa BCV hoy: ${info.tasaBcvHoy}`,
+        `🎁 Kit: ${info.kit.join(", ")}\n📍 Hidratación: ${info.hidratacion.join(", ")}\n💱 Tasa BCV hoy: ${info.tasaBcvHoy}\n` +
+        `🌐 Inscríbete en ${info.sitioWeb}`,
       toolCalls,
     };
   }
 
   return {
     reply:
-      "¡Hola! Soy Biker, tu asistente virtual del Reto Virgen de la Paz 🏔️. Envíame tu cédula para consultar tu inscripción, pide tu certificado, o pregunta por horarios/hidratación/paddock. ¿En qué te ayudo?",
+      `¡Hola! Soy Biker, tu asistente virtual del Reto Virgen de la Paz 🏔️. Envíame tu cédula para consultar tu inscripción, pide tu certificado, o pregunta por horarios/hidratación/paddock/pago. ` +
+      `Inscríbete en ${EVENT_WEBSITE}. ¿En qué te ayudo?`,
     toolCalls,
   };
 }
@@ -411,7 +430,13 @@ async function runOpenRouter(
     }
   }
 
-  return { reply: "No pude completar tu solicitud en este momento, un organizador te contactará pronto.", toolCalls };
+  // Se agotaron las rondas de tool-calling sin una respuesta final: antes esto solo
+  // devolvía una promesa vaga ("un organizador te contactará pronto") sin escalar de
+  // verdad — la conversación quedaba con el bot activo y nadie se enteraba. Ahora sí se
+  // escala como cualquier otro caso sin respuesta.
+  const result = await toolEscalarAHumano(conversationId);
+  toolCalls.push({ name: "escalar_a_humano", result });
+  return { reply: `No logré resolver tu solicitud. ${result}`, toolCalls };
 }
 
 export async function processAgentMessage(
