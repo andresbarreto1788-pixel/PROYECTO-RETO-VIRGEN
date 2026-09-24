@@ -4,6 +4,7 @@ import type { FormEvent } from "react";
 import {
   JERSEY_CUTS,
   JERSEY_SIZES_BY_CUT,
+  PAYMENT_METHOD_LABELS,
   ROUTE_MODALITIES,
   TEAM_DISCOUNT_MIN_SIZE,
   TEAM_DISCOUNT_PERCENT,
@@ -489,8 +490,11 @@ export function TeamRegistrationForm({ bcvRate, onSuccess }: TeamRegistrationFor
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
           >
-            <option value="pago-movil">Pago Móvil</option>
-            <option value="transferencia">Transferencia</option>
+            {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </label>
         <label>

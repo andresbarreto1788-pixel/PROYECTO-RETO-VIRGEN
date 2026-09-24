@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { JERSEY_CUTS, JERSEY_SIZES_BY_CUT, ROUTE_MODALITIES } from "../data/raceData";
+import { JERSEY_CUTS, JERSEY_SIZES_BY_CUT, PAYMENT_METHOD_LABELS, ROUTE_MODALITIES } from "../data/raceData";
 import { formatBs, formatUsd, generateRegistrationId } from "../lib/format";
 import { apiPost, ApiError } from "../lib/api";
 import { PaymentProofUploader } from "./PaymentProofUploader";
@@ -206,8 +206,11 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
             value={paymentMethod}
             onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}
           >
-            <option value="pago-movil">Pago Móvil</option>
-            <option value="transferencia">Transferencia</option>
+            {Object.entries(PAYMENT_METHOD_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
           </select>
         </label>
       </div>

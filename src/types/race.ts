@@ -42,7 +42,7 @@ export interface Sponsor {
   name: string;
 }
 
-export type PaymentMethod = "pago-movil" | "transferencia";
+export type PaymentMethod = "pago-movil" | "transferencia" | "zelle" | "binance-pay";
 
 export type PaymentPlan = "full" | "partial";
 

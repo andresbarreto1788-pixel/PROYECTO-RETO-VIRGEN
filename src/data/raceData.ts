@@ -1,4 +1,4 @@
-import type { ElevationPoint, JerseyCut, KitItem, RacePhase, RouteModality, Sponsor } from "../types/race";
+import type { ElevationPoint, JerseyCut, KitItem, PaymentMethod, RacePhase, RouteModality, Sponsor } from "../types/race";
 
 export const EVENT = {
   edition: "5ta Edición",
@@ -114,6 +114,20 @@ export const PAYMENT_INFO = {
     telefono: "812-4935873",
     titular: "Jhaiderson Pacheco",
   },
+  binancePay: {
+    idBinance: "87916836",
+    usuario: "zero2024",
+  },
+};
+
+// Etiquetas legibles de cada método de pago — usadas tanto en el <select> del
+// formulario de inscripción como en el mensaje de WhatsApp del comprobante, para que
+// ambos lugares queden sincronizados con un solo cambio si se agrega un método nuevo.
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  "pago-movil": "Pago Móvil",
+  transferencia: "Transferencia / Depósito",
+  zelle: "Zelle",
+  "binance-pay": "Binance Pay",
 };
 
 // Íconos pequeños (recortados de los QR reales o construidos en el componente para

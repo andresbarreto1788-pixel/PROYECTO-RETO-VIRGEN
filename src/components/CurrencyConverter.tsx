@@ -137,6 +137,19 @@ export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
               Titular: <span className="text-ink">{PAYMENT_INFO.zelle.titular}</span>
             </p>
           </div>
+
+          <div className="border-t border-brand-card-border pt-3">
+            <div className="flex items-center gap-2">
+              <PaymentLogo src={PAYMENT_METHOD_LOGOS.binance} alt="Binance" />
+              <p className="font-bold uppercase text-ink">Binance Pay</p>
+            </div>
+            <p className="mt-1.5 text-ink-muted">
+              ID Binance: <span className="text-ink">{PAYMENT_INFO.binancePay.idBinance}</span>
+            </p>
+            <p className="text-ink-muted">
+              Usuario: <span className="text-ink">{PAYMENT_INFO.binancePay.usuario}</span>
+            </p>
+          </div>
         </div>
 
         {PAYMENT_QR_CODES.length > 0 && (

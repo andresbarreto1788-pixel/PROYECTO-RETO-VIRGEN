@@ -22,7 +22,11 @@ const ROUTE_LABELS: Record<string, string> = {
 const PAYMENT_METHOD_LABEL: Record<string, string> = {
   "pago-movil": "Pago Móvil",
   transferencia: "Transferencia",
+  zelle: "Zelle",
+  "binance-pay": "Binance Pay",
 };
+
+const PAYMENT_METHODS = ["pago-movil", "transferencia", "zelle", "binance-pay"] as const;
 
 // idNumber acepta cédula (V-12345678) o pasaporte (formatos alfanuméricos variados),
 // por eso el patrón es permisivo en forma y solo acota longitud/caracteres válidos.
@@ -71,7 +75,7 @@ const registerSchema = z
     modality: z.enum(["reto-33k", "reto-22k"], { message: "Modalidad inválida." }),
     jerseyCut: z.enum(["caballero", "dama"], { message: "Corte de jersey inválido." }),
     jerseySize: z.enum(["XS", "S", "M", "L", "XL", "XXL"], { message: "Talla inválida." }),
-    paymentMethod: z.enum(["pago-movil", "transferencia"], { message: "Método de pago inválido." }),
+    paymentMethod: z.enum(PAYMENT_METHODS, { message: "Método de pago inválido." }),
     paymentReference: z.string().trim().min(1, "Falta la referencia de pago.").max(50),
     paymentPlan: z.enum(["full", "partial"], { message: "Plan de pago inválido." }),
     amountUsd: z.coerce.number().positive("Monto inválido.").max(100_000),
@@ -196,7 +200,7 @@ const registerTeamSchema = z.object({
   captainFullName: z.string().trim().min(3, "Nombre del capitán inválido.").max(150),
   captainPhone: phoneSchema,
   captainEmail: emailSchema.optional(),
-  paymentMethod: z.enum(["pago-movil", "transferencia"], { message: "Método de pago inválido." }),
+  paymentMethod: z.enum(PAYMENT_METHODS, { message: "Método de pago inválido." }),
   paymentReference: z.string().trim().min(1, "Falta la referencia de pago.").max(50),
   bcvRate: z.coerce.number().positive("Tasa BCV inválida.").max(1_000_000),
   membersJson: z.string().min(2, "Faltan los integrantes del equipo."),

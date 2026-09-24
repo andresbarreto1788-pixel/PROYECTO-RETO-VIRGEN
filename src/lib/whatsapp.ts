@@ -1,11 +1,11 @@
-import { EVENT, JERSEY_CUTS, ROUTE_MODALITIES } from "../data/raceData";
+import { EVENT, JERSEY_CUTS, PAYMENT_METHOD_LABELS, ROUTE_MODALITIES } from "../data/raceData";
 import { formatBs, formatUsd } from "./format";
 import type { RegistrationData, TeamRegistrationData } from "../types/race";
 
 export function buildRegistrationWhatsAppLink(data: RegistrationData): string {
   const route = ROUTE_MODALITIES.find((m) => m.id === data.modality);
   const modalityLabel = route ? `${route.distanceKm} KM — Salida ${route.startPoint}` : data.modality;
-  const paymentLabel = data.paymentMethod === "pago-movil" ? "Pago Móvil" : "Transferencia";
+  const paymentLabel = PAYMENT_METHOD_LABELS[data.paymentMethod];
   const cutLabel = JERSEY_CUTS.find((c) => c.id === data.jerseyCut)?.label ?? data.jerseyCut;
 
   const planLabel = data.paymentPlan === "full" ? "Pago Completo (100%)" : "Pago por Cuotas";
@@ -41,7 +41,7 @@ export function buildRegistrationWhatsAppLink(data: RegistrationData): string {
 export function buildTeamRegistrationWhatsAppLink(data: TeamRegistrationData): string {
   const route = ROUTE_MODALITIES.find((m) => m.id === data.modality);
   const modalityLabel = route ? `${route.distanceKm} KM — Salida ${route.startPoint}` : data.modality;
-  const paymentLabel = data.paymentMethod === "pago-movil" ? "Pago Móvil" : "Transferencia";
+  const paymentLabel = PAYMENT_METHOD_LABELS[data.paymentMethod];
 
   const lines = [
     `*Nueva inscripción de equipo — Reto Virgen de la Paz*`,
