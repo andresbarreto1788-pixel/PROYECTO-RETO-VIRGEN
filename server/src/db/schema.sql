@@ -82,3 +82,25 @@ CREATE TABLE IF NOT EXISTS crm_messages (
 ALTER TABLE crm_messages ADD COLUMN IF NOT EXISTS email_subject VARCHAR(255) NULL;
 
 CREATE INDEX IF NOT EXISTS idx_crm_messages_conversation_id ON crm_messages(conversation_id);
+
+-- Inscripción grupal: un capitán registra a todo el equipo (ej. "Café Flor de la
+-- Patria") en un solo envío con un único comprobante de pago. member_count y
+-- discount_percent quedan fijos en la fila del equipo porque se calculan una sola vez,
+-- en el momento del envío (10% si member_count >= 10), y no se recalculan después si
+-- se suman corredores sueltos al mismo nombre de equipo más adelante.
+CREATE TABLE IF NOT EXISTS teams (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name VARCHAR(150) NOT NULL,
+  route VARCHAR(20) NOT NULL,
+  member_count INT NOT NULL,
+  discount_percent NUMERIC(5, 2) NOT NULL DEFAULT 0,
+  captain_full_name VARCHAR(150) NOT NULL,
+  captain_phone VARCHAR(30) NOT NULL,
+  captain_email VARCHAR(150) NULL,
+  subtotal_amount_usd NUMERIC(10, 2) NOT NULL,
+  total_amount_usd NUMERIC(10, 2) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+ALTER TABLE athletes ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_athletes_team_id ON athletes(team_id);

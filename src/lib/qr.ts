@@ -1,7 +1,6 @@
 import QRCode from "qrcode";
-import type { RegistrationData } from "../types/race";
 
-export async function generateAthleteQr(data: RegistrationData): Promise<string> {
+export async function generateAthleteQr(data: { athleteId: string; qrCodeToken: string }): Promise<string> {
   const payload = `RVP-VERIFY:${data.athleteId}:${data.qrCodeToken}`;
 
   return QRCode.toDataURL(payload, {

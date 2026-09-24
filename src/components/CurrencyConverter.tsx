@@ -1,8 +1,9 @@
-import { RefreshCw, ShieldCheck, WifiOff } from "lucide-react";
+import { QrCode, RefreshCw, ShieldCheck, WifiOff, Zap } from "lucide-react";
 import { useState } from "react";
 import type { BcvRateState } from "../types/race";
 import { formatBs, formatUsd } from "../lib/format";
-import { PAYMENT_INFO } from "../data/raceData";
+import { PAYMENT_INFO, PAYMENT_METHOD_LOGOS, PAYMENT_QR_CODES } from "../data/raceData";
+import { ExpandableImage } from "./ui/ExpandableImage";
 
 interface CurrencyConverterProps {
   bcv: BcvRateState & { refetch: () => void };
@@ -12,6 +13,26 @@ function formatUpdatedAt(updatedAt: string | null): string {
   if (!updatedAt) return "";
   const time = new Intl.DateTimeFormat("es-VE", { hour: "2-digit", minute: "2-digit" }).format(new Date(updatedAt));
   return `Actualizado hoy · ${time}`;
+}
+
+// Insignia pequeña junto al nombre de cada método de pago — solo para identificar de un
+// vistazo, nunca a tamaño grande (por eso h-5 w-5 fijo en vez de escalar con el resto).
+function PaymentLogo({ src, alt }: { src: string; alt: string }) {
+  return (
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-white p-0.5 ring-1 ring-black/5">
+      <img src={src} alt={alt} className="h-full w-full object-contain" />
+    </span>
+  );
+}
+
+// Zelle no tiene imagen propia (no se recibió una); se representa con un badge simple en
+// su color de marca en vez de recrear el logo pixel a pixel.
+function ZelleLogo() {
+  return (
+    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#6D1ED4]">
+      <Zap size={11} className="fill-white text-white" />
+    </span>
+  );
 }
 
 export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
@@ -76,8 +97,11 @@ export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
 
         <div className="mt-3 space-y-3 text-xs">
           <div>
-            <p className="font-bold uppercase text-ink">Pago Móvil</p>
-            <p className="mt-1 text-ink-muted">
+            <div className="flex items-center gap-2">
+              <PaymentLogo src={PAYMENT_METHOD_LOGOS.bancoProvincial} alt="Banco Provincial" />
+              <p className="font-bold uppercase text-ink">Pago Móvil</p>
+            </div>
+            <p className="mt-1.5 text-ink-muted">
               Banco: <span className="text-ink">{PAYMENT_INFO.pagoMovil.banco}</span>
             </p>
             <p className="text-ink-muted">
@@ -89,15 +113,57 @@ export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
           </div>
 
           <div className="border-t border-brand-card-border pt-3">
-            <p className="font-bold uppercase text-ink">Transferencia / Depósito</p>
-            <p className="mt-1 text-ink-muted">
+            <div className="flex items-center gap-2">
+              <PaymentLogo src={PAYMENT_METHOD_LOGOS.bancoProvincial} alt="Banco Provincial" />
+              <p className="font-bold uppercase text-ink">Transferencia / Depósito</p>
+            </div>
+            <p className="mt-1.5 text-ink-muted">
               Banco: <span className="text-ink">{PAYMENT_INFO.banco}</span>
             </p>
             <p className="text-ink-muted">
               Cuenta: <span className="text-ink">{PAYMENT_INFO.cuenta}</span>
             </p>
           </div>
+
+          <div className="border-t border-brand-card-border pt-3">
+            <div className="flex items-center gap-2">
+              <ZelleLogo />
+              <p className="font-bold uppercase text-ink">Zelle</p>
+            </div>
+            <p className="mt-1.5 text-ink-muted">
+              Zelle: <span className="text-ink">{PAYMENT_INFO.zelle.telefono}</span>
+            </p>
+            <p className="text-ink-muted">
+              Titular: <span className="text-ink">{PAYMENT_INFO.zelle.titular}</span>
+            </p>
+          </div>
         </div>
+
+        {PAYMENT_QR_CODES.length > 0 && (
+          <div className="mt-4 border-t border-brand-card-border pt-3">
+            <p className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-ink-muted">
+              <QrCode size={12} className="text-brand-neon" /> Escanea para pagar
+            </p>
+            <div className="mt-3 flex flex-wrap gap-3">
+              {PAYMENT_QR_CODES.map((qr) => (
+                <div
+                  key={qr.id}
+                  className="w-24 shrink-0 self-start overflow-hidden rounded-xl border border-brand-card-border bg-white p-2 text-center shadow-sm"
+                >
+                  <ExpandableImage
+                    src={qr.image}
+                    alt={`Código QR — ${qr.label} — ${qr.holderName}`}
+                    className="aspect-square w-full rounded-md object-contain"
+                  />
+                  <div className="mt-1.5 flex flex-col items-center gap-1">
+                    {qr.logo && <img src={qr.logo} alt="" className="h-4 w-4 object-contain" />}
+                    <p className="text-[9px] font-bold uppercase leading-tight text-surface">{qr.label}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <p className="mt-3 text-[10px] text-ink-muted">
           Realiza tu pago y adjunta el comprobante al confirmar tu inscripción.

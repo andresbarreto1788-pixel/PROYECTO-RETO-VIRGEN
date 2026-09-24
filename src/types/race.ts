@@ -79,3 +79,41 @@ export interface BcvRateState {
   error: string | null;
   updatedAt: string | null;
 }
+
+export interface TeamMemberInput {
+  fullName: string;
+  idNumber: string;
+  phone: string;
+  email: string;
+  emergencyContact: string;
+  bloodType: BloodType;
+  jerseyCut: JerseyCut;
+  jerseySize: JerseySize;
+}
+
+export interface TeamMemberResult extends TeamMemberInput {
+  athleteId: string;
+  qrCodeToken: string;
+  amountUsd: number;
+  amountBs: number;
+}
+
+export interface TeamRegistrationData {
+  registrationId: string;
+  teamName: string;
+  teamId: string;
+  modality: RouteModalityId;
+  captainFullName: string;
+  captainPhone: string;
+  captainEmail: string;
+  paymentMethod: PaymentMethod;
+  paymentReference: string;
+  memberCount: number;
+  discountPercent: number;
+  subtotalUsd: number;
+  totalUsd: number;
+  totalBs: number;
+  bcvRate: number;
+  members: TeamMemberResult[];
+  createdAt: string;
+}

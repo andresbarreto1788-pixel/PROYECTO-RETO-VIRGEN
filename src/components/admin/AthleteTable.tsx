@@ -185,6 +185,7 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
           <thead className="bg-brand-card text-[10px] uppercase tracking-widest text-ink-muted">
             <tr>
               <th className="px-3 py-2.5">Atleta</th>
+              <th className="px-3 py-2.5">Equipo</th>
               <th className="px-3 py-2.5">Ruta</th>
               <th className="px-3 py-2.5">Talla</th>
               <th className="px-3 py-2.5">Pago</th>
@@ -203,6 +204,7 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
                     <div className="font-semibold text-ink">{athlete.fullName}</div>
                     <div className="text-ink-muted">{athlete.ci}</div>
                   </td>
+                  <td className="px-3 py-2.5 text-ink-muted">{athlete.teamName ?? "—"}</td>
                   <td className="px-3 py-2.5 text-ink-muted">{athlete.route === "33K_REDOMA" ? "33K" : "22K"}</td>
                   <td className="px-3 py-2.5 text-ink-muted">
                     {athlete.jerseySize} <span className="text-[10px] uppercase">({athlete.jerseyCut})</span>
@@ -300,7 +302,7 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
             })}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-ink-muted">
+                <td colSpan={8} className="px-3 py-6 text-center text-ink-muted">
                   No hay atletas para estos filtros.
                 </td>
               </tr>

@@ -88,9 +88,11 @@ adminRouter.get("/metrics", requireAdmin, async (_req, res) => {
 
 const ATHLETE_WITH_PAYMENTS_SELECT = `
   SELECT a.*,
+      t.name AS team_name,
       COALESCE(paid.paid_usd, 0) AS paid_amount_usd,
       COALESCE(pays.payments, '[]') AS payments
    FROM athletes a
+   LEFT JOIN teams t ON t.id = a.team_id
    LEFT JOIN (
      SELECT athlete_id, SUM(amount_usd_equiv) AS paid_usd
      FROM payments WHERE status = 'APPROVED' GROUP BY athlete_id
@@ -467,9 +469,11 @@ adminRouter.get("/athletes/:id/certificate", requireAdmin, async (req, res) => {
 // --- Exportación CSV -------------------------------------------------------
 
 adminRouter.get("/export", requireAdmin, async (_req, res) => {
-  const { rows } = await pool.query("SELECT * FROM athletes ORDER BY route, full_name");
+  const { rows } = await pool.query(
+    `SELECT a.*, t.name AS team_name FROM athletes a LEFT JOIN teams t ON t.id = a.team_id ORDER BY a.route, a.full_name`,
+  );
 
-  const header = ["Dorsal", "Nombre", "Cédula", "Teléfono", "Ruta", "Corte", "Talla", "Estatus de Pago", "Check-in", "Fecha Check-in"];
+  const header = ["Dorsal", "Nombre", "Cédula", "Teléfono", "Equipo", "Ruta", "Corte", "Talla", "Estatus de Pago", "Check-in", "Fecha Check-in"];
   const lines = [header.join(",")];
 
   const sizeCountsByCut: Record<string, Record<string, number>> = {
@@ -484,6 +488,7 @@ adminRouter.get("/export", requireAdmin, async (_req, res) => {
         csvEscape(a.full_name),
         a.ci,
         a.phone,
+        csvEscape(a.team_name ?? ""),
         a.route,
         a.jersey_cut,
         a.jersey_size,

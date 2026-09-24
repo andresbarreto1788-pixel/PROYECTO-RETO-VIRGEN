@@ -95,6 +95,12 @@ export const ROUTE_MODALITIES: RouteModality[] = [
   },
 ];
 
+// Inscripción grupal: a partir de este número de integrantes el equipo recibe el
+// descuento. Por debajo del mínimo el equipo igual se puede inscribir, solo que sin
+// descuento.
+export const TEAM_DISCOUNT_MIN_SIZE = 10;
+export const TEAM_DISCOUNT_PERCENT = 10;
+
 export const PAYMENT_INFO = {
   banco: "Banco Provincial",
   bancoCodigo: "0108",
@@ -104,7 +110,47 @@ export const PAYMENT_INFO = {
     cedula: "18924508",
     telefono: "0414-0746270",
   },
+  zelle: {
+    telefono: "812-4935873",
+    titular: "Jhaiderson Pacheco",
+  },
 };
+
+// Íconos pequeños (recortados de los QR reales o construidos en el componente para
+// Zelle, que no tiene imagen propia) usados solo para identificar de un vistazo cada
+// método de pago junto a su nombre — nunca se muestran a tamaño grande.
+export const PAYMENT_METHOD_LOGOS = {
+  bancoProvincial: "/images/logo-banco-provincial.png",
+  binance: "/images/logo-binance.png",
+};
+
+export interface PaymentQrCode {
+  id: string;
+  label: string;
+  holderName: string;
+  image: string;
+  logo?: string;
+}
+
+// Códigos QR de métodos de pago (Pago Móvil, Binance Pay, etc.), mostrados como galería
+// en el conversor de moneda. Agregar uno nuevo aquí (+ la imagen en public/images/) es
+// suficiente: el componente que los renderiza no necesita cambios.
+export const PAYMENT_QR_CODES: PaymentQrCode[] = [
+  {
+    id: "pago-movil-bbva",
+    label: "Pago Móvil · BBVA Provincial",
+    holderName: "Gustavo Alejandro Briceño Linares",
+    image: "/images/qr-pago-movil-bbva.png",
+    logo: PAYMENT_METHOD_LOGOS.bancoProvincial,
+  },
+  {
+    id: "binance-pay",
+    label: "Binance Pay",
+    holderName: "ID Binance: 87916836 (zero2024)",
+    image: "/images/qr-binance-pay.png",
+    logo: PAYMENT_METHOD_LOGOS.binance,
+  },
+];
 
 export const KIT_ITEMS: KitItem[] = [
   {

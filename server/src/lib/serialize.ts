@@ -32,8 +32,26 @@ export function serializeAthlete(row: Record<string, unknown>) {
     checkedInAt: row.checked_in_at,
     qrToken: row.qr_token,
     createdAt: row.created_at,
+    teamId: row.team_id ?? null,
+    teamName: row.team_name ?? null,
     ...(row.paid_amount_usd !== undefined ? { paidAmountUsd: Number(row.paid_amount_usd) } : {}),
     ...(Array.isArray(row.payments) ? { payments: row.payments.map(serializePayment) } : {}),
+  };
+}
+
+export function serializeTeam(row: Record<string, unknown>) {
+  return {
+    id: row.id,
+    name: row.name,
+    route: row.route,
+    memberCount: row.member_count,
+    discountPercent: Number(row.discount_percent),
+    captainFullName: row.captain_full_name,
+    captainPhone: row.captain_phone,
+    captainEmail: row.captain_email ?? null,
+    subtotalAmountUsd: Number(row.subtotal_amount_usd),
+    totalAmountUsd: Number(row.total_amount_usd),
+    createdAt: row.created_at,
   };
 }
 

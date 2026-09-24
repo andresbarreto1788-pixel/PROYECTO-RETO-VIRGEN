@@ -37,6 +37,8 @@ export interface Athlete {
   checkedInAt: string | null;
   qrToken: string;
   createdAt: string;
+  teamId: string | null;
+  teamName: string | null;
   paidAmountUsd?: number;
   payments?: Payment[];
 }
