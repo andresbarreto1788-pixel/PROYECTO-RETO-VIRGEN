@@ -107,6 +107,19 @@ export interface TeamApprovalResult {
   membersWithoutEmail: number;
 }
 
+export interface TeamDeleteResult {
+  mode: "unlink" | "cascade";
+  affectedMembers: number;
+}
+
+export interface TeamRecalcResult {
+  discountPercent: number;
+  perMemberUsd: number;
+  totalUsd: number;
+  statusChanges: { athleteId: string; from: PaymentStatus; to: PaymentStatus }[];
+  overpaidMembers: { athleteId: string; fullName: string; surplusUsd: number }[];
+}
+
 export type CheckInResult =
   | {
       status: "checked_in" | "already_checked_in";

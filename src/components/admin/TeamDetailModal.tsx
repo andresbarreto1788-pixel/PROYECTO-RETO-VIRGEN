@@ -1,10 +1,21 @@
-import { CheckCircle2, Download, ExternalLink, X } from "lucide-react";
+import { CheckCircle2, Download, ExternalLink, Pencil, TrendingDown, Trash2, UserPlus, X } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { API_BASE, ApiError, adminDownloadCertificate, adminGet, adminPatch, adminPost } from "../../lib/api";
+import { API_BASE, ApiError, adminDelete, adminDownloadCertificate, adminGet, adminPatch, adminPost } from "../../lib/api";
 import { formatUsd } from "../../lib/format";
-import type { Athlete, PaymentStatus, TeamApprovalResult, TeamDetailResponse, TeamSummary } from "../../types/admin";
+import type {
+  Athlete,
+  PaymentStatus,
+  TeamApprovalResult,
+  TeamDeleteResult,
+  TeamDetailResponse,
+  TeamRecalcResult,
+  TeamSummary,
+} from "../../types/admin";
 import { AddPaymentModal } from "./AddPaymentModal";
+import { AddTeamMemberModal } from "./AddTeamMemberModal";
+import { ChoiceDialog } from "./ChoiceDialog";
 import { ConfirmDialog } from "./ConfirmDialog";
+import { EditTeamModal } from "./EditTeamModal";
 
 interface TeamDetailModalProps {
   teamId: string;
@@ -44,6 +55,14 @@ export function TeamDetailModal({ teamId, onClose, onMutated }: TeamDetailModalP
   const [confirmingApproval, setConfirmingApproval] = useState(false);
   const [approving, setApproving] = useState(false);
   const [approvalResult, setApprovalResult] = useState<TeamApprovalResult | null>(null);
+  const [editingTeam, setEditingTeam] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const [deletingTeam, setDeletingTeam] = useState(false);
+  const [deletingTeamBusyKey, setDeletingTeamBusyKey] = useState<string | null>(null);
+  const [removingMember, setRemovingMember] = useState<Athlete | null>(null);
+  const [removingMemberBusyKey, setRemovingMemberBusyKey] = useState<string | null>(null);
+  const [recalculating, setRecalculating] = useState(false);
+  const [recalcResult, setRecalcResult] = useState<TeamRecalcResult | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -112,6 +131,52 @@ export function TeamDetailModal({ teamId, onClose, onMutated }: TeamDetailModalP
     }
   }
 
+  async function handleDeleteTeam(mode: string) {
+    setDeletingTeamBusyKey(mode);
+    setError(null);
+    try {
+      await adminDelete<TeamDeleteResult>(`/api/admin/teams/${teamId}?mode=${mode}`);
+      setDeletingTeam(false);
+      onMutated();
+      onClose();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo eliminar el equipo.");
+    } finally {
+      setDeletingTeamBusyKey(null);
+    }
+  }
+
+  async function handleRemoveMember(mode: string) {
+    if (!removingMember) return;
+    setRemovingMemberBusyKey(mode);
+    setError(null);
+    try {
+      await adminDelete(`/api/admin/teams/${teamId}/members/${removingMember.id}?mode=${mode}`);
+      setRemovingMember(null);
+      await load();
+      onMutated();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo quitar al integrante.");
+    } finally {
+      setRemovingMemberBusyKey(null);
+    }
+  }
+
+  async function handleRecalculate() {
+    setRecalculating(true);
+    setError(null);
+    try {
+      const result = await adminPost<TeamRecalcResult>(`/api/admin/teams/${teamId}/recalculate-pricing`, {});
+      setRecalcResult(result);
+      await load();
+      onMutated();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "No se pudo recalcular el descuento.");
+    } finally {
+      setRecalculating(false);
+    }
+  }
+
   const pendingCount = members.filter((m) => m.paymentStatus !== "PAID").length;
 
   return (
@@ -122,9 +187,33 @@ export function TeamDetailModal({ teamId, onClose, onMutated }: TeamDetailModalP
       >
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-black uppercase tracking-widest text-ink">{team?.name ?? "Equipo"}</h2>
-          <button type="button" onClick={onClose} className="text-ink-muted hover:text-ink">
-            <X size={18} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {team && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setEditingTeam(true)}
+                  title="Editar equipo"
+                  aria-label="Editar equipo"
+                  className="rounded-full bg-white/10 p-1.5 text-ink-muted transition-colors hover:text-ink"
+                >
+                  <Pencil size={14} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDeletingTeam(true)}
+                  title="Eliminar equipo"
+                  aria-label="Eliminar equipo"
+                  className="rounded-full bg-red-500/15 p-1.5 text-red-400 transition-colors hover:text-red-300"
+                >
+                  <Trash2 size={14} />
+                </button>
+              </>
+            )}
+            <button type="button" onClick={onClose} className="ml-1 text-ink-muted hover:text-ink">
+              <X size={18} />
+            </button>
+          </div>
         </div>
 
         <div className="flex gap-2">
@@ -187,11 +276,53 @@ export function TeamDetailModal({ teamId, onClose, onMutated }: TeamDetailModalP
               )}
             </div>
 
-            {team.discountEligible && (
-              <p className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-[11px] leading-relaxed text-yellow-400">
-                Este equipo ya tiene {team.memberCount} integrantes y calificaría para el 10% de descuento, pero se
-                inscribió sin él. Si corresponde ajustarlo, hazlo manualmente desde el pago de cada integrante.
-              </p>
+            {team.discountEligible && !recalcResult && (
+              <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3 text-[11px] leading-relaxed text-yellow-400">
+                <div className="flex items-center justify-between gap-3">
+                  <p>
+                    Este equipo ya tiene {team.memberCount} integrantes y calificaría para el 10% de descuento, pero
+                    se inscribió sin él.
+                  </p>
+                  <button
+                    type="button"
+                    disabled={recalculating}
+                    onClick={handleRecalculate}
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-yellow-500/20 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-widest text-yellow-300 disabled:opacity-50"
+                  >
+                    <TrendingDown size={12} /> {recalculating ? "Aplicando…" : "Aplicar descuento"}
+                  </button>
+                </div>
+                <p className="mt-1.5 opacity-80">
+                  Baja el precio por integrante a todo el equipo. Si algún integrante ya pagó de más, te lo indica
+                  para que se lo devuelvas a mano — nunca se genera un reembolso solo.
+                </p>
+              </div>
+            )}
+
+            {recalcResult && (
+              <div className="space-y-2 rounded-lg border border-brand-neon/30 bg-brand-neon/10 p-3 text-[11px] text-brand-neon">
+                <div className="flex items-start gap-2">
+                  <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
+                  <p>
+                    Descuento aplicado: {recalcResult.discountPercent}% · nuevo precio por integrante{" "}
+                    {formatUsd(recalcResult.perMemberUsd)} · nuevo total {formatUsd(recalcResult.totalUsd)}.
+                  </p>
+                </div>
+                {recalcResult.overpaidMembers.length > 0 && (
+                  <div className="rounded-lg bg-surface/60 p-2 text-ink">
+                    <p className="text-[10px] uppercase tracking-widest text-ink-muted">
+                      Integrantes con excedente a devolver
+                    </p>
+                    <ul className="mt-1 space-y-0.5">
+                      {recalcResult.overpaidMembers.map((m) => (
+                        <li key={m.athleteId}>
+                          {m.fullName} — {formatUsd(m.surplusUsd)}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
             )}
 
             <div className="rounded-lg border border-brand-card-border bg-surface p-3">
@@ -235,17 +366,26 @@ export function TeamDetailModal({ teamId, onClose, onMutated }: TeamDetailModalP
         )}
 
         {team && tab === "integrantes" && (
-          <div className="overflow-x-auto rounded-xl border border-brand-card-border">
-            <table className="w-full min-w-[700px] text-left text-xs">
-              <thead className="bg-surface text-[10px] uppercase tracking-widest text-ink-muted">
-                <tr>
-                  <th className="px-3 py-2.5">Integrante</th>
-                  <th className="px-3 py-2.5">Talla</th>
-                  <th className="px-3 py-2.5">Pago</th>
-                  <th className="px-3 py-2.5">Check-in</th>
-                  <th className="px-3 py-2.5">Acciones</th>
-                </tr>
-              </thead>
+          <div className="space-y-3">
+            <button
+              type="button"
+              onClick={() => setAddingMember(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-brand-card-border px-3 py-1.5 text-[10px] font-bold uppercase tracking-widest text-ink-muted transition-colors hover:border-brand-neon hover:text-brand-neon"
+            >
+              <UserPlus size={12} /> Agregar integrante
+            </button>
+
+            <div className="overflow-x-auto rounded-xl border border-brand-card-border">
+              <table className="w-full min-w-[760px] text-left text-xs">
+                <thead className="bg-surface text-[10px] uppercase tracking-widest text-ink-muted">
+                  <tr>
+                    <th className="px-3 py-2.5">Integrante</th>
+                    <th className="px-3 py-2.5">Talla</th>
+                    <th className="px-3 py-2.5">Pago</th>
+                    <th className="px-3 py-2.5">Check-in</th>
+                    <th className="px-3 py-2.5">Acciones</th>
+                  </tr>
+                </thead>
               <tbody>
                 {members.map((member) => {
                   const busy = busyMemberId === member.id;
@@ -307,6 +447,14 @@ export function TeamDetailModal({ teamId, onClose, onMutated }: TeamDetailModalP
                           >
                             <Download size={12} />
                           </button>
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => setRemovingMember(member)}
+                            className="rounded-full bg-white/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-widest text-ink-muted transition-colors hover:text-ink disabled:opacity-30"
+                          >
+                            Quitar
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -319,8 +467,9 @@ export function TeamDetailModal({ teamId, onClose, onMutated }: TeamDetailModalP
                     </td>
                   </tr>
                 )}
-              </tbody>
-            </table>
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -345,6 +494,76 @@ export function TeamDetailModal({ teamId, onClose, onMutated }: TeamDetailModalP
           busy={approving}
           onConfirm={handleConfirmApproval}
           onCancel={() => setConfirmingApproval(false)}
+        />
+      )}
+
+      {editingTeam && team && (
+        <EditTeamModal
+          team={team}
+          onClose={() => setEditingTeam(false)}
+          onSaved={() => {
+            setEditingTeam(false);
+            load();
+            onMutated();
+          }}
+        />
+      )}
+
+      {addingMember && team && (
+        <AddTeamMemberModal
+          team={team}
+          onClose={() => setAddingMember(false)}
+          onSaved={() => {
+            setAddingMember(false);
+            load();
+            onMutated();
+          }}
+        />
+      )}
+
+      {deletingTeam && team && (
+        <ChoiceDialog
+          title="Eliminar equipo"
+          message={`¿Qué quieres hacer con "${team.name}" y sus ${team.memberCount} integrantes?`}
+          busyKey={deletingTeamBusyKey}
+          options={[
+            {
+              key: "unlink",
+              label: "Solo desagrupar",
+              description: "Los integrantes conservan su inscripción, pagos y dorsal — solo dejan de estar en un equipo.",
+            },
+            {
+              key: "cascade",
+              label: "Eliminar equipo e integrantes",
+              description: `Borra las ${team.memberCount} inscripciones y sus pagos. Irreversible.`,
+              danger: true,
+            },
+          ]}
+          onSelect={handleDeleteTeam}
+          onCancel={() => setDeletingTeam(false)}
+        />
+      )}
+
+      {removingMember && (
+        <ChoiceDialog
+          title="Quitar integrante"
+          message={`¿Qué quieres hacer con ${removingMember.fullName}?`}
+          busyKey={removingMemberBusyKey}
+          options={[
+            {
+              key: "unlink",
+              label: "Desvincular del equipo",
+              description: "Conserva su inscripción, pagos y dorsal — pasa a ser una inscripción individual.",
+            },
+            {
+              key: "delete",
+              label: "Eliminar inscripción",
+              description: "Borra la inscripción por completo. Se rechaza si ya tiene pagos aprobados o dorsal asignado.",
+              danger: true,
+            },
+          ]}
+          onSelect={handleRemoveMember}
+          onCancel={() => setRemovingMember(null)}
         />
       )}
     </div>
