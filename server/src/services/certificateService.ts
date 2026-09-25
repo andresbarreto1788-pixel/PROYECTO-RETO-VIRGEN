@@ -39,6 +39,16 @@ const LOGO_PATH = path.join(process.cwd(), "public/images/isotipo-monumento.jpeg
 const BACKGROUND_IMAGE_PATH = path.join(process.cwd(), "public/images/certificado-fondo.jpg");
 const BACKGROUND_IMAGE_CREDIT = "Foto: José Luis Valero · CC BY-SA 3.0 · Wikimedia Commons";
 
+// Mismas familias tipográficas que el flyer oficial de la 5ta edición: Anton (títulos
+// grandes en mayúsculas, "5TA EDICIÓN" / "DOMINGO 17 DE ENERO") y Poppins (textos de
+// apoyo en negrita, "FECHA:"). PDFKit no trae estas fuentes embebidas como Helvetica,
+// así que se registran desde archivos .ttf servidos igual que el resto de assets
+// (relativo al cwd, no al módulo compilado en dist-server).
+const FONT_DISPLAY = path.join(process.cwd(), "public/fonts/Anton-Regular.ttf");
+const FONT_BODY = path.join(process.cwd(), "public/fonts/Poppins-Regular.ttf");
+const FONT_BODY_SEMIBOLD = path.join(process.cwd(), "public/fonts/Poppins-SemiBold.ttf");
+const FONT_BODY_BOLD = path.join(process.cwd(), "public/fonts/Poppins-Bold.ttf");
+
 let logoBuffer: Buffer | null | undefined;
 let backgroundImageBuffer: Buffer | null | undefined;
 let backgroundTextureBuffer: Buffer | null | undefined;
@@ -90,6 +100,27 @@ function getCyclistCutoutBuffer(): Buffer | null {
   return cyclistCutoutBuffer;
 }
 
+interface CertificateFonts {
+  display: string;
+  body: string;
+  bodySemibold: string;
+  bodyBold: string;
+}
+
+function registerCertificateFonts(doc: PDFKit.PDFDocument): CertificateFonts {
+  try {
+    doc.registerFont("Anton", FONT_DISPLAY);
+    doc.registerFont("Poppins", FONT_BODY);
+    doc.registerFont("Poppins-SemiBold", FONT_BODY_SEMIBOLD);
+    doc.registerFont("Poppins-Bold", FONT_BODY_BOLD);
+    return { display: "Anton", body: "Poppins", bodySemibold: "Poppins-SemiBold", bodyBold: "Poppins-Bold" };
+  } catch {
+    // Si los .ttf no están disponibles (p. ej. un checkout parcial), el certificado
+    // se sigue generando con las fuentes internas de PDFKit en vez de fallar el envío.
+    return { display: "Helvetica-Bold", body: "Helvetica", bodySemibold: "Helvetica-Bold", bodyBold: "Helvetica-Bold" };
+  }
+}
+
 const ROUTE_LABELS: Record<string, string> = {
   "33K_REDOMA": "33K · Redoma",
   "22K_ILUSTRES": "22K · Ilustres",
@@ -132,6 +163,7 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
     doc.on("end", () => resolve(Buffer.concat(chunks)));
     doc.on("error", reject);
 
+    const fonts = registerCertificateFonts(doc);
     const { width, height } = doc.page;
 
     doc.rect(0, 0, width, height).fill(BACKGROUND_COLOR);
@@ -198,7 +230,7 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
       doc
         .fillColor(TEXT_COLOR)
         .fillOpacity(0.75)
-        .font("Helvetica")
+        .font(fonts.body)
         .fontSize(6)
         .text(BACKGROUND_IMAGE_CREDIT, sidebarX + 14 - 140, sidebarY + sidebarHeight - 14 - 6, {
           width: 280,
@@ -245,26 +277,26 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
 
     doc
       .fillColor(ACCENT_COLOR)
-      .font("Helvetica-Bold")
-      .fontSize(14)
+      .font(fonts.display)
+      .fontSize(16)
       .text("RETO VIRGEN DE LA PAZ", contentX, 58, { align: "center", width: contentWidth });
 
     doc
       .fillColor(TEXT_COLOR)
-      .font("Helvetica-Bold")
-      .fontSize(28)
+      .font(fonts.display)
+      .fontSize(30)
       .text("CERTIFICADO DE PARTICIPACIÓN", contentX, 88, { align: "center", width: contentWidth });
 
     doc
       .fillColor(MUTED_COLOR)
-      .font("Helvetica")
+      .font(fonts.body)
       .fontSize(13)
       .text("Se otorga el presente certificado a:", contentX, 148, { align: "center", width: contentWidth });
 
     doc
       .fillColor(ACCENT_COLOR)
-      .font("Helvetica-Bold")
-      .fontSize(28)
+      .font(fonts.display)
+      .fontSize(30)
       .text(athlete.fullName.toUpperCase(), contentX, 178, { align: "center", width: contentWidth });
 
     const routeLabel = ROUTE_LABELS[athlete.route] ?? athlete.route;
@@ -285,12 +317,12 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
       const x = contentX + i * columnWidth;
       doc
         .fillColor(MUTED_COLOR)
-        .font("Helvetica")
+        .font(fonts.bodySemibold)
         .fontSize(10)
         .text(col.label, x, detailsY, { width: columnWidth, align: "center" });
       doc
         .fillColor(TEXT_COLOR)
-        .font("Helvetica-Bold")
+        .font(fonts.bodyBold)
         .fontSize(16)
         .text(col.value, x, detailsY + 16, { width: columnWidth, align: "center" });
     });
@@ -322,7 +354,7 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
 
     doc
       .fillColor(MUTED_COLOR)
-      .font("Helvetica")
+      .font(fonts.body)
       .fontSize(8)
       .text("Verifica la autenticidad escaneando el código QR", qrX - 30, qrY + qrSize + 10, {
         width: qrCaptionWidth,
