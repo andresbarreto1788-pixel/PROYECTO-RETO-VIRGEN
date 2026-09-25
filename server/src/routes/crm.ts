@@ -141,10 +141,18 @@ crmRouter.post("/conversations/:id/messages", requireAdmin, validateBody(organiz
   ]);
 
   let delivered: boolean | null = null;
+  let deliveryError: string | null = null;
   let emailSubject: string | null = null;
 
   if (conversation.channel === "WHATSAPP") {
-    delivered = await metaWhatsAppService.sendTextMessage(conversation.contact_identifier, message);
+    const result = await metaWhatsAppService.sendTextMessageDetailed(conversation.contact_identifier, message);
+    delivered = result.ok;
+    if (!result.ok) {
+      deliveryError =
+        result.errorCode === 131047
+          ? "Han pasado más de 24 horas desde el último mensaje del atleta. Meta ya no permite texto libre en esta conversación — el atleta debe escribir de nuevo para reabrir la ventana, o hay que usar una plantilla aprobada."
+          : (result.errorMessage ?? "Error desconocido al enviar por WhatsApp.");
+    }
   } else if (conversation.channel === "GMAIL") {
     const lastSubjectRes = await pool.query(
       "SELECT email_subject FROM crm_messages WHERE conversation_id = $1 AND email_subject IS NOT NULL ORDER BY created_at DESC LIMIT 1",
@@ -165,7 +173,7 @@ crmRouter.post("/conversations/:id/messages", requireAdmin, validateBody(organiz
     [id, message, emailSubject],
   );
 
-  res.status(201).json({ message: serializeCrmMessage(inserted.rows[0]), delivered });
+  res.status(201).json({ message: serializeCrmMessage(inserted.rows[0]), delivered, deliveryError });
 });
 
 // --- Eliminar un mensaje del historial (solo del CRM, no lo retracta en WhatsApp) --

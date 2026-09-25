@@ -179,6 +179,12 @@ export interface CrmMessage {
   createdAt: string;
 }
 
+export interface OrganizerMessageResponse {
+  message: CrmMessage;
+  delivered: boolean | null;
+  deliveryError: string | null;
+}
+
 export type WhatsAppConnectionStatus = "DISCONNECTED" | "CONNECTING" | "QR_READY" | "CONNECTED";
 
 export interface WhatsAppStatus {

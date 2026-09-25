@@ -1,7 +1,14 @@
 import { AlertTriangle, ArrowDown, Bot, MessageCircle, Pause, Play, Send, Settings, Sparkles, Trash2, UserCog } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, adminDelete, adminGet, adminPatch, adminPost } from "../../lib/api";
-import type { Conversation, ConversationChannel, CrmMessage, CrmSender, PaymentStatus } from "../../types/admin";
+import type {
+  Conversation,
+  ConversationChannel,
+  CrmMessage,
+  CrmSender,
+  OrganizerMessageResponse,
+  PaymentStatus,
+} from "../../types/admin";
 import { ChannelSettingsModal } from "./ChannelSettingsModal";
 import { CrmCommandCenter } from "./CrmCommandCenter";
 
@@ -273,10 +280,17 @@ export function CrmPanel() {
         );
         setMessages((prev) => [...prev, res.inboundMessage, ...(res.outboundMessage ? [res.outboundMessage] : [])]);
       } else {
-        const res = await adminPost<{ message: CrmMessage }>(`/api/admin/crm/conversations/${selected.id}/messages`, {
+        const res = await adminPost<OrganizerMessageResponse>(`/api/admin/crm/conversations/${selected.id}/messages`, {
           message: text,
         });
         setMessages((prev) => [...prev, res.message]);
+        if (res.delivered === false) {
+          const channelName = selected.channel === "WHATSAPP" ? "WhatsApp" : "Gmail";
+          setError(
+            `El mensaje quedó guardado en el CRM pero no se pudo entregar por ${channelName}. ` +
+              (res.deliveryError ?? "Revisa Configuración de Canales."),
+          );
+        }
       }
       setDraft("");
       await loadConversations();

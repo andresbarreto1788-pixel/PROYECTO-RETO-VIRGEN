@@ -76,9 +76,19 @@ export async function sendOrganizerAlert(text: string): Promise<boolean> {
   return sendTextMessage(organizerWhatsAppPhone(), text);
 }
 
-export async function sendTextMessage(to: string, text: string): Promise<boolean> {
+export interface SendResult {
+  ok: boolean;
+  errorCode?: number;
+  errorMessage?: string;
+}
+
+// Error 131047 de Meta: pasaron más de 24h desde el último mensaje del contacto y ya no se
+// puede mandar texto libre (solo plantillas aprobadas). Es la causa más común de que un
+// mensaje manual del organizador falle mientras el bot, que responde en el mismo instante
+// del mensaje entrante, nunca la pisa.
+export async function sendTextMessageDetailed(to: string, text: string): Promise<SendResult> {
   const phoneId = phoneNumberId();
-  if (!phoneId) return false;
+  if (!phoneId) return { ok: false, errorMessage: "META_PHONE_NUMBER_ID / META_WHATSAPP_TOKEN no configurados." };
 
   try {
     const res = await graphFetch(`${phoneId}/messages`, {
@@ -91,15 +101,30 @@ export async function sendTextMessage(to: string, text: string): Promise<boolean
         text: { body: text },
       }),
     });
-    if (!res || !res.ok) {
-      if (res) console.error("Error enviando mensaje por Meta WhatsApp:", await res.text());
-      return false;
+    if (!res) return { ok: false, errorMessage: "META_PHONE_NUMBER_ID / META_WHATSAPP_TOKEN no configurados." };
+    if (!res.ok) {
+      const bodyText = await res.text();
+      console.error("Error enviando mensaje por Meta WhatsApp:", bodyText);
+      let errorCode: number | undefined;
+      let errorMessage: string | undefined;
+      try {
+        const parsed = JSON.parse(bodyText) as { error?: { code?: number; message?: string } };
+        errorCode = parsed.error?.code;
+        errorMessage = parsed.error?.message;
+      } catch {
+        errorMessage = bodyText;
+      }
+      return { ok: false, errorCode, errorMessage };
     }
-    return true;
+    return { ok: true };
   } catch (err) {
     console.error("Error enviando mensaje por Meta WhatsApp:", err);
-    return false;
+    return { ok: false, errorMessage: err instanceof Error ? err.message : String(err) };
   }
+}
+
+export async function sendTextMessage(to: string, text: string): Promise<boolean> {
+  return (await sendTextMessageDetailed(to, text)).ok;
 }
 
 async function uploadMedia(buffer: Buffer, filename: string): Promise<string | null> {
