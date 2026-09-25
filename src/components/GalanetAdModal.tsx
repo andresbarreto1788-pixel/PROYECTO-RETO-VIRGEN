@@ -1,10 +1,11 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { X } from "lucide-react";
+import { Globe, X } from "lucide-react";
 import { useEffect, useState } from "react";
 
 const DISMISSED_KEY = "galanet-ad-dismissed";
 const OPEN_DELAY_MS = 1200;
 const INSTAGRAM_URL = "https://www.instagram.com/galanet_solution/";
+const WEBSITE_URL = "https://www.galanet.com.ve";
 
 function InstagramIcon({ size = 14 }: { size?: number }) {
   return (
@@ -96,19 +97,30 @@ export function GalanetAdModal() {
               playsInline
             />
 
-            <div className="flex items-center justify-between gap-3 border-t border-brand-card-border px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-brand-card-border px-4 py-3">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
-                Síguenos en Instagram
+                Conoce a Galanet
               </span>
-              <a
-                href={INSTAGRAM_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center gap-2 rounded-full bg-gradient-to-tr from-[#feda75] via-[#d62976] to-[#4f5bd5] px-4 py-2 text-xs font-bold text-white transition-transform hover:scale-105"
-              >
-                <InstagramIcon />
-                @galanet_solution
-              </a>
+              <div className="flex flex-wrap items-center gap-2">
+                <a
+                  href={WEBSITE_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-full border border-brand-card-border bg-surface px-4 py-2 text-xs font-bold text-ink transition-colors hover:border-brand-neon/50 hover:text-brand-neon"
+                >
+                  <Globe size={14} />
+                  galanet.com.ve
+                </a>
+                <a
+                  href={INSTAGRAM_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-full bg-gradient-to-tr from-[#feda75] via-[#d62976] to-[#4f5bd5] px-4 py-2 text-xs font-bold text-white transition-transform hover:scale-105"
+                >
+                  <InstagramIcon />
+                  @galanet_solution
+                </a>
+              </div>
             </div>
           </motion.div>
         </motion.div>
