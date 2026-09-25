@@ -127,7 +127,8 @@ const tools: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "escalar_a_humano",
-      description: "Pausa al bot y transfiere la conversación actual a un organizador humano.",
+      description:
+        "Avisa a un organizador humano y le da a la persona el contacto directo de Gustavo Briceño para lo que necesite tratar con él en persona. No pausa al bot: sigues disponible para seguir ayudando en la misma conversación.",
       parameters: { type: "object", properties: {} },
     },
   },
@@ -241,9 +242,11 @@ async function toolReenviarCertificado(ci: string): Promise<string> {
   return sent ? `Certificado reenviado a ${a.email}.` : "No se pudo reenviar el certificado, intenta de nuevo más tarde.";
 }
 
+// No pausa el bot: las respuestas manuales del organizador desde el CRM dependen de la
+// ventana de 24h de Meta y suelen fallar (ver metaWhatsAppService), así que pausar aquí
+// dejaba al atleta sin nadie que le respondiera. El bot le da el contacto directo de
+// Gustavo y sigue disponible para lo demás en la misma conversación.
 async function toolEscalarAHumano(conversationId: string): Promise<string> {
-  await pool.query("UPDATE conversations SET bot_active = false, updated_at = NOW() WHERE id = $1", [conversationId]);
-
   const convRes = await pool.query(
     `SELECT c.channel, c.contact_identifier, a.full_name AS athlete_full_name
      FROM conversations c LEFT JOIN athletes a ON a.id = c.athlete_id WHERE c.id = $1`,
@@ -259,7 +262,7 @@ async function toolEscalarAHumano(conversationId: string): Promise<string> {
 
   return (
     `Te comparto el contacto directo de Gustavo Briceño, el organizador del evento: WhatsApp ${ORGANIZER_WHATSAPP_DISPLAY}. ` +
-    `Escríbele por ahí para que te atienda en persona — mientras tanto el bot queda en pausa en este chat.`
+    `Escríbele por ahí para lo que necesites tratar con él en persona — y aquí sigo yo por si te puedo ayudar con algo más del evento.`
   );
 }
 
