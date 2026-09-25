@@ -1,4 +1,5 @@
 import { Footer } from "../components/Footer";
+import { GalanetAdModal } from "../components/GalanetAdModal";
 import { Header } from "../components/Header";
 import { Hero } from "../components/Hero";
 import { RegistrationSection } from "../components/RegistrationSection";
@@ -18,6 +19,7 @@ export function LandingPage() {
       </main>
       <Footer />
       <WhatsAppFloatingButton />
+      <GalanetAdModal />
     </div>
   );
 }
