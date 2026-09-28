@@ -1,4 +1,13 @@
-import type { ElevationPoint, JerseyCut, KitItem, PaymentMethod, RacePhase, RouteModality, Sponsor } from "../types/race";
+import type {
+  ElevationPoint,
+  HydrationPoint,
+  JerseyCut,
+  KitItem,
+  PaymentMethod,
+  RacePhase,
+  RouteModality,
+  Sponsor,
+} from "../types/race";
 
 export const EVENT = {
   edition: "5ta Edición",
@@ -64,14 +73,29 @@ export const PHASES: RacePhase[] = [
 export const ELEVATION_PROFILE: ElevationPoint[] = [
   { km: 0, meters: 620, label: "Redoma Trujillo" },
   { km: 4, meters: 680 },
-  { km: 8, meters: 810, label: "1er punto de hidratación" },
-  { km: 12, meters: 960 },
+  { km: 6.8, meters: 771, label: "P1" },
+  { km: 8, meters: 810 },
+  { km: 8.8, meters: 840, label: "P2" },
+  { km: 12, meters: 960, label: "P3" },
   { km: 16, meters: 1180, label: "Curvas entre pinos" },
-  { km: 20, meters: 1340, label: "2do punto de hidratación" },
+  { km: 20, meters: 1340, label: "P4" },
   { km: 24, meters: 1520 },
-  { km: 28, meters: 1690, label: "Pendiente máxima 14%" },
+  { km: 25.6, meters: 1588, label: "P5" },
+  { km: 28, meters: 1690 },
+  { km: 28.5, meters: 1707, label: "P6" },
   { km: 31, meters: 1790 },
   { km: 33, meters: 1820, label: "Monumento · Cima" },
+];
+
+// Puntos de hidratación oficiales del recorrido, tal como los marca la organización
+// sobre el km real de la ruta.
+export const HYDRATION_POINTS: HydrationPoint[] = [
+  { point: 1, name: "Frente Circuito Judicial", km: 6.8 },
+  { point: 2, name: "Plaza Bolívar", km: 8.8 },
+  { point: 3, name: "Plaza Medina Angarita", km: 12 },
+  { point: 4, name: "El Loro", km: 20 },
+  { point: 5, name: "Curva Señor Morillo", km: 25.6 },
+  { point: 6, name: "La Caneca", km: 28.5 },
 ];
 
 export const ROUTE_MODALITIES: RouteModality[] = [
@@ -207,13 +231,9 @@ export const JERSEY_SIZES_BY_CUT: Record<JerseyCut, readonly string[]> = {
 export const JERSEY_SIZES = JERSEY_SIZES_BY_CUT.caballero;
 
 export const SPONSORS: Sponsor[] = [
-  { name: "Galanet" },
-  { name: "Alcaldía de Trujillo" },
-  { name: "TODO tv" },
-  { name: "Soccer Burguer" },
-  { name: "Tetê" },
-  { name: "Henry's" },
-  { name: "Rizo Café" },
-  { name: "La Protectora Café Gourmet" },
-  { name: "CTT Turismo" },
+  { name: "Galanet", logo: "/images/logo-galanet.png" },
+  { name: "Coketikas", logo: "/images/logo-coketikas.png" },
+  { name: "Metatlon", logo: "/images/logo-metatlon.png" },
+  { name: "Radio Paisana 92.5 FM", logo: "/images/logo-radio-paisana.png" },
+  { name: "Pinxeles Creativos", logo: "/images/logo-pinxeles.png" },
 ];

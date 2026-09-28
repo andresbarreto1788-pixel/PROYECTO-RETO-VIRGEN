@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { KIT_ITEMS, PHASES } from "../data/raceData";
 import { ElevationChart } from "./ElevationChart";
+import { HydrationPoints } from "./HydrationPoints";
 import { JerseyShowcase } from "./JerseyShowcase";
 import { ExpandableImage } from "./ui/ExpandableImage";
 
@@ -23,7 +24,7 @@ export function ScrollJourney() {
             <div
               key={phase.id}
               id={phase.id === "altimetria" ? "altimetria" : phase.id === "monumento" ? "kit" : undefined}
-              className={`grid items-center gap-10 lg:grid-cols-2 lg:gap-16 ${reversed ? "lg:[&>*:first-child]:order-2" : ""}`}
+              className={`grid gap-10 lg:grid-cols-2 lg:gap-16 ${phase.id === "altimetria" ? "lg:items-start" : "items-center"} ${reversed ? "lg:[&>*:first-child]:order-2" : ""}`}
             >
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -59,6 +60,7 @@ export function ScrollJourney() {
                 {phase.id === "altimetria" && (
                   <div className="mt-6">
                     <ElevationChart />
+                    <HydrationPoints />
                   </div>
                 )}
 

@@ -22,6 +22,12 @@ export interface ElevationPoint {
   label?: string;
 }
 
+export interface HydrationPoint {
+  point: number;
+  name: string;
+  km: number;
+}
+
 export interface RacePhase {
   id: string;
   index: number;
@@ -40,6 +46,7 @@ export interface KitItem {
 
 export interface Sponsor {
   name: string;
+  logo?: string;
 }
 
 export type PaymentMethod = "pago-movil" | "transferencia" | "zelle" | "binance-pay";
