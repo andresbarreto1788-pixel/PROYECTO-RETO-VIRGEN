@@ -24,7 +24,7 @@ export function ScrollJourney() {
             <div
               key={phase.id}
               id={phase.id === "altimetria" ? "altimetria" : phase.id === "monumento" ? "kit" : undefined}
-              className={`grid gap-10 lg:grid-cols-2 lg:gap-16 ${phase.id === "altimetria" ? "lg:items-start" : "items-center"} ${reversed ? "lg:[&>*:first-child]:order-2" : ""}`}
+              className={`grid gap-10 lg:grid-cols-2 lg:gap-16 ${phase.id === "altimetria" || phase.id === "meta" ? "lg:items-start" : "items-center"} ${reversed ? "lg:[&>*:first-child]:order-2" : ""}`}
             >
               <motion.div
                 initial={{ opacity: 0, y: 40 }}
@@ -78,6 +78,20 @@ export function ScrollJourney() {
                       </li>
                     ))}
                   </ul>
+                )}
+
+                {phase.id === "meta" && (
+                  <div className="mt-6 overflow-hidden rounded-2xl border border-brand-card-border bg-brand-card">
+                    <video
+                      className="aspect-[9/16] w-full max-w-xs mx-auto object-cover"
+                      src="/videos/evento-ciclista.mp4"
+                      autoPlay
+                      muted
+                      loop
+                      playsInline
+                      aria-hidden="true"
+                    />
+                  </div>
                 )}
               </motion.div>
             </div>

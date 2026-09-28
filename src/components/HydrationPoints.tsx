@@ -4,6 +4,10 @@ import { HYDRATION_POINTS } from "../data/raceData";
 export function HydrationPoints() {
   return (
     <div className="mt-8">
+      <p className="mb-3 text-sm font-bold uppercase tracking-wide text-brand-neon">
+        Puntos de Hidratación y Recorrido
+      </p>
+
       <div className="overflow-hidden rounded-2xl border border-brand-card-border bg-brand-card">
         <video
           className="aspect-video w-full object-cover"
