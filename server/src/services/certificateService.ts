@@ -141,6 +141,8 @@ export interface AthleteCertificateData {
   bibNumber: number | null;
   qrToken: string;
   email: string;
+  // Solo para integrantes de un equipo: se imprime en el certificado.
+  teamName?: string | null;
 }
 
 export async function generateCertificatePdf(athlete: AthleteCertificateData): Promise<Buffer> {
@@ -298,6 +300,19 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
       .font(fonts.display)
       .fontSize(30)
       .text(athlete.fullName.toUpperCase(), contentX, 178, { align: "center", width: contentWidth });
+
+    if (athlete.teamName) {
+      doc
+        .fillColor(TEXT_COLOR)
+        .font(fonts.bodySemibold)
+        .fontSize(13)
+        .text(`EQUIPO · ${athlete.teamName.toUpperCase()}`, contentX, 218, {
+          align: "center",
+          width: contentWidth,
+          height: 18,
+          ellipsis: true,
+        });
+    }
 
     const routeLabel = ROUTE_LABELS[athlete.route] ?? athlete.route;
     const bibLabel = athlete.bibNumber != null ? String(athlete.bibNumber) : "Sin asignar";

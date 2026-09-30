@@ -194,6 +194,7 @@ const registerTeamSchema = z.object({
   captainFullName: z.string().trim().min(3, "Nombre del capitán inválido.").max(150),
   captainPhone: phoneSchema,
   captainEmail: emailSchema.optional(),
+  certificateEmail: emailSchema,
   paymentMethod: z.enum(PAYMENT_METHODS, { message: "Método de pago inválido." }),
   paymentReference: z.string().trim().min(1, "Falta la referencia de pago.").max(50),
   bcvRate: z.coerce.number().positive("Tasa BCV inválida.").max(1_000_000),
@@ -259,8 +260,8 @@ registerRouter.post(
 
       const teamResult = await client.query(
         `INSERT INTO teams
-          (name, route, member_count, discount_percent, captain_full_name, captain_phone, captain_email, subtotal_amount_usd, total_amount_usd)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+          (name, route, member_count, discount_percent, captain_full_name, captain_phone, captain_email, certificate_email, subtotal_amount_usd, total_amount_usd)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
          RETURNING *`,
         [
           body.teamName,
@@ -270,6 +271,7 @@ registerRouter.post(
           body.captainFullName,
           body.captainPhone,
           body.captainEmail ?? null,
+          body.certificateEmail,
           subtotalUsd,
           totalUsd,
         ],

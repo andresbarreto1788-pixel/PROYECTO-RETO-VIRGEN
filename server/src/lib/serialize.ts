@@ -51,6 +51,7 @@ export function serializeTeam(row: Record<string, unknown>) {
     captainFullName: row.captain_full_name,
     captainPhone: row.captain_phone,
     captainEmail: row.captain_email ?? null,
+    certificateEmail: row.certificate_email ?? null,
     subtotalAmountUsd: Number(row.subtotal_amount_usd),
     totalAmountUsd: Number(row.total_amount_usd),
     createdAt: row.created_at,

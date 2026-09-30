@@ -19,6 +19,7 @@ export function EditTeamModal({ team, onClose, onSaved }: EditTeamModalProps) {
   const [captainFullName, setCaptainFullName] = useState(team.captainFullName);
   const [captainPhone, setCaptainPhone] = useState(team.captainPhone);
   const [captainEmail, setCaptainEmail] = useState(team.captainEmail ?? "");
+  const [certificateEmail, setCertificateEmail] = useState(team.certificateEmail ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,6 +33,7 @@ export function EditTeamModal({ team, onClose, onSaved }: EditTeamModalProps) {
         captainFullName,
         captainPhone,
         ...(captainEmail ? { captainEmail } : {}),
+        ...(certificateEmail ? { certificateEmail } : {}),
       });
       onSaved();
     } catch (err) {
@@ -87,6 +89,15 @@ export function EditTeamModal({ team, onClose, onSaved }: EditTeamModalProps) {
               type="email"
               value={captainEmail}
               onChange={(e) => setCaptainEmail(e.target.value)}
+            />
+          </label>
+          <label className={labelClass}>
+            Correo para los certificados
+            <input
+              className={inputClass}
+              type="email"
+              value={certificateEmail}
+              onChange={(e) => setCertificateEmail(e.target.value)}
             />
           </label>
         </div>

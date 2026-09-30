@@ -165,6 +165,65 @@ export async function sendOrganizerEmailReply(
   }
 }
 
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+export interface TeamCertificateAttachment {
+  athleteName: string;
+  pdfBuffer: Buffer;
+}
+
+function safeFilenamePart(value: string): string {
+  return value.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "");
+}
+
+// Un solo correo con los certificados de varios integrantes del mismo equipo,
+// dirigido al correo que el equipo eligió para recibirlos.
+export async function sendTeamCertificatesEmail(
+  toEmail: string,
+  teamName: string,
+  certificates: TeamCertificateAttachment[],
+): Promise<boolean> {
+  const gmailUser = process.env.GMAIL_USER;
+  const gmailAppPassword = process.env.GMAIL_APP_PASSWORD;
+  const subject = `Certificados de tu equipo ${teamName} - Reto Virgen de la Paz 2027`;
+
+  if (!gmailUser || !gmailAppPassword) {
+    console.log(`[EMAIL MOCK] Enviando ${certificates.length} certificados del equipo "${teamName}" a: ${toEmail}`);
+    return true;
+  }
+
+  const listHtml = certificates.map((c) => `<li>${escapeHtml(c.athleteName)}</li>`).join("");
+  const listText = certificates.map((c) => `- ${c.athleteName}`).join("\n");
+
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: { user: gmailUser, pass: gmailAppPassword },
+    });
+
+    await transporter.sendMail({
+      from: `"Reto Virgen de la Paz" <${gmailUser}>`,
+      replyTo: gmailUser,
+      to: toEmail,
+      subject,
+      text: `Hola,\n\nAdjuntamos los certificados oficiales de participación del equipo ${teamName}. Cada integrante debe presentar el QR de su certificado en el paddock para retirar su kit.\n\n${listText}\n\n¡Nos vemos en la meta!`,
+      html: `<p>Hola,</p><p>Adjuntamos los certificados oficiales de participación del equipo <strong>${escapeHtml(teamName)}</strong>. Cada integrante debe presentar el QR de su certificado en el paddock para retirar su kit.</p><ul>${listHtml}</ul><p>¡Nos vemos en la meta!</p>`,
+      attachments: certificates.map((c, i) => ({
+        filename: `Certificado-${String(i + 1).padStart(2, "0")}-${safeFilenamePart(c.athleteName) || "integrante"}.pdf`,
+        content: c.pdfBuffer,
+        contentType: "application/pdf",
+      })),
+    });
+
+    return true;
+  } catch (err) {
+    console.error("Error enviando certificados del equipo por correo:", err);
+    return false;
+  }
+}
+
 export async function sendRegistrationCertificateEmail(
   athlete: AthleteCertificateData,
   pdfBuffer: Buffer,

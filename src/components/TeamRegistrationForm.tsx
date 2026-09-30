@@ -55,6 +55,7 @@ interface TeamRegisterResponse {
     captainFullName: string;
     captainPhone: string;
     captainEmail: string | null;
+    certificateEmail: string | null;
     subtotalAmountUsd: number;
     totalAmountUsd: number;
     createdAt: string;
@@ -74,6 +75,7 @@ export function TeamRegistrationForm({ bcvRate, onSuccess }: TeamRegistrationFor
   const [captainFullName, setCaptainFullName] = useState("");
   const [captainPhone, setCaptainPhone] = useState("");
   const [captainEmail, setCaptainEmail] = useState("");
+  const [certificateEmail, setCertificateEmail] = useState("");
   const [modality, setModality] = useState<RouteModalityId>(ROUTE_MODALITIES[0].id);
   const [members, setMembers] = useState<TeamMemberInput[]>(() =>
     Array.from({ length: TEAM_DISCOUNT_MIN_SIZE }, emptyMember),
@@ -145,6 +147,10 @@ export function TeamRegistrationForm({ bcvRate, onSuccess }: TeamRegistrationFor
       setError("Ingresa un correo electrónico válido para el capitán.");
       return;
     }
+    if (!certificateEmail || !EMAIL_PATTERN.test(certificateEmail)) {
+      setError("Ingresa un correo válido para recibir los certificados del equipo.");
+      return;
+    }
     if (members.length < MIN_MEMBERS) {
       setError(`Un equipo necesita al menos ${MIN_MEMBERS} integrantes.`);
       return;
@@ -177,6 +183,7 @@ export function TeamRegistrationForm({ bcvRate, onSuccess }: TeamRegistrationFor
     formData.set("captainFullName", captainFullName);
     formData.set("captainPhone", captainPhone);
     if (captainEmail) formData.set("captainEmail", captainEmail);
+    formData.set("certificateEmail", certificateEmail);
     formData.set("paymentMethod", paymentMethod);
     formData.set("paymentReference", paymentReference);
     formData.set("bcvRate", String(bcvRate));
@@ -275,6 +282,19 @@ export function TeamRegistrationForm({ bcvRate, onSuccess }: TeamRegistrationFor
             onChange={(e) => setCaptainEmail(e.target.value)}
             placeholder="capitan@ejemplo.com"
           />
+        </label>
+        <label className="sm:col-span-2">
+          <span className={labelClass}>Correo para recibir los certificados del equipo</span>
+          <input
+            className={inputClass}
+            type="email"
+            value={certificateEmail}
+            onChange={(e) => setCertificateEmail(e.target.value)}
+            placeholder="equipo@ejemplo.com"
+          />
+          <span className="mt-1 block text-[10px] text-ink-muted">
+            Te enviaremos aquí los certificados de todos los integrantes, con el nombre del equipo.
+          </span>
         </label>
       </div>
 

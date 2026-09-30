@@ -7,7 +7,7 @@ import { serializeAthlete, serializeTeam, serializeTeamSummary } from "../lib/se
 import { discountPercentForSize, perMemberUsd, TEAM_PRICE_PER_MEMBER_USD } from "../lib/pricing.js";
 import { recomputeAthletePaymentStatus } from "../services/paymentService.js";
 import { fetchBcvRate } from "../services/bcvService.js";
-import { dispatchCertificateEmail } from "../services/certificateDispatch.js";
+import { dispatchCertificateEmail, dispatchTeamCertificates } from "../services/certificateDispatch.js";
 import type { AthleteCertificateData } from "../services/certificateService.js";
 import { ATHLETE_WITH_PAYMENTS_SELECT } from "./admin.js";
 
@@ -278,23 +278,20 @@ adminTeamsRouter.post("/:id/approve-payments", requireAdmin, async (req, res) =>
   });
 
   // Después del commit + de responder: en serie, nunca en paralelo (ver comentario arriba).
-  void (async () => {
-    for (const data of certificateQueue) {
-      await dispatchCertificateEmail(data).catch((err) =>
-        console.error("Error despachando certificado tras aprobación de equipo:", err),
-      );
-    }
-  })();
+  void dispatchTeamCertificates(certificateQueue).catch((err) =>
+    console.error("Error despachando certificados tras aprobación de equipo:", err),
+  );
 });
 
 // --- Editar equipo --------------------------------------------------------
 
-const TEAM_EDITABLE_FIELDS = ["name", "captainFullName", "captainPhone", "captainEmail"] as const;
+const TEAM_EDITABLE_FIELDS = ["name", "captainFullName", "captainPhone", "captainEmail", "certificateEmail"] as const;
 const TEAM_FIELD_TO_COLUMN: Record<(typeof TEAM_EDITABLE_FIELDS)[number], string> = {
   name: "name",
   captainFullName: "captain_full_name",
   captainPhone: "captain_phone",
   captainEmail: "captain_email",
+  certificateEmail: "certificate_email",
 };
 
 const editTeamSchema = z
@@ -303,6 +300,7 @@ const editTeamSchema = z
     captainFullName: z.string().trim().min(3, "Nombre del capitán inválido.").max(150),
     captainPhone: phoneSchema,
     captainEmail: emailSchema,
+    certificateEmail: emailSchema,
   })
   .partial()
   .refine((data) => Object.keys(data).length > 0, { message: "No hay campos para actualizar." });

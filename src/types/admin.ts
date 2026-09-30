@@ -72,6 +72,7 @@ export interface TeamSummary {
   captainFullName: string;
   captainPhone: string;
   captainEmail: string | null;
+  certificateEmail: string | null;
   subtotalAmountUsd: number;
   totalAmountUsd: number;
   membersTotalUsd: number;

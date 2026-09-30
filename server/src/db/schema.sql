@@ -106,5 +106,9 @@ CREATE TABLE IF NOT EXISTS teams (
 
 ALTER TABLE teams ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT NOW();
 
+-- Correo elegido por el equipo para recibir TODOS los certificados de sus integrantes.
+-- Si es NULL se usa captain_email, y si tampoco existe, el correo de cada integrante.
+ALTER TABLE teams ADD COLUMN IF NOT EXISTS certificate_email VARCHAR(150) NULL;
+
 ALTER TABLE athletes ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_athletes_team_id ON athletes(team_id);
