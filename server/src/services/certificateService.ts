@@ -49,6 +49,10 @@ const FONT_BODY = path.join(process.cwd(), "public/fonts/Poppins-Regular.ttf");
 const FONT_BODY_SEMIBOLD = path.join(process.cwd(), "public/fonts/Poppins-SemiBold.ttf");
 const FONT_BODY_BOLD = path.join(process.cwd(), "public/fonts/Poppins-Bold.ttf");
 
+// Sello oficial "Reto Virgen de la Paz · Trujillo" (el mismo del footer del sitio).
+const SEAL_PATH = path.join(process.cwd(), "public/images/sello-oficial-badge.png");
+
+let sealBuffer: Buffer | null | undefined;
 let logoBuffer: Buffer | null | undefined;
 let backgroundImageBuffer: Buffer | null | undefined;
 let backgroundTextureBuffer: Buffer | null | undefined;
@@ -65,6 +69,17 @@ function getLogoBuffer(): Buffer | null {
     }
   }
   return logoBuffer;
+}
+
+function getSealBuffer(): Buffer | null {
+  if (sealBuffer === undefined) {
+    try {
+      sealBuffer = readFileSync(SEAL_PATH);
+    } catch {
+      sealBuffer = null;
+    }
+  }
+  return sealBuffer;
 }
 
 function getMonumentPhotoBuffer(): Buffer | null {
@@ -366,6 +381,14 @@ export async function generateCertificatePdf(athlete: AthleteCertificateData): P
     const qrY = height - qrSize - 70;
 
     doc.image(qrBuffer, qrX, qrY, { width: qrSize, height: qrSize });
+
+    // Sello oficial: mismo tamaño y misma altura que el QR, espejado en el lado
+    // izquierdo del panel de contenido (mismo margen al marco que el QR).
+    const seal = getSealBuffer();
+    if (seal) {
+      const sealX = contentX + qrCaptionOverhang + 10;
+      doc.image(seal, sealX, qrY, { width: qrSize, height: qrSize });
+    }
 
     doc
       .fillColor(MUTED_COLOR)
