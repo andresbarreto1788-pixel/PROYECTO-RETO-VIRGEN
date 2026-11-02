@@ -1,3 +1,4 @@
+import ExcelJS from "exceljs";
 import { Router } from "express";
 import { z } from "zod";
 import { pool } from "../db/pool.js";
@@ -33,11 +34,6 @@ const phoneSchema = z
   .min(7, "Teléfono inválido.")
   .max(20, "Teléfono inválido.")
   .regex(/^[0-9+()\- ]+$/, "Teléfono inválido.");
-
-function csvEscape(value: unknown): string {
-  const str = String(value ?? "");
-  return /[",\n]/.test(str) ? `"${str.replace(/"/g, '""')}"` : str;
-}
 
 // --- Auth -------------------------------------------------------------
 
@@ -553,53 +549,133 @@ adminRouter.get("/athletes/:id/certificate", requireAdmin, async (req, res) => {
   res.send(pdfBuffer);
 });
 
-// --- Exportación CSV -------------------------------------------------------
+// --- Exportación Excel -----------------------------------------------------
+
+const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  PAID: "Solvente",
+  PARTIAL: "Por cuotas",
+  PENDING_REVIEW: "Pendiente",
+  REJECTED: "Rechazado",
+};
+const ROUTE_LABELS: Record<string, string> = { "33K_REDOMA": "33K Redoma", "22K_ILUSTRES": "22K Ilustres" };
+
+function countBy<T>(items: T[], key: (item: T) => string): [string, number][] {
+  const counts = new Map<string, number>();
+  for (const item of items) counts.set(key(item), (counts.get(key(item)) ?? 0) + 1);
+  return [...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+}
 
 adminRouter.get("/export", requireAdmin, async (_req, res) => {
   const { rows } = await pool.query(
-    `SELECT a.*, t.name AS team_name FROM athletes a LEFT JOIN teams t ON t.id = a.team_id ORDER BY a.route, a.full_name`,
+    `SELECT a.*, t.name AS team_name,
+            COALESCE((SELECT SUM(p.amount_usd_equiv) FROM payments p WHERE p.athlete_id = a.id AND p.status = 'APPROVED'), 0) AS paid_usd
+       FROM athletes a LEFT JOIN teams t ON t.id = a.team_id
+      ORDER BY a.bib_number NULLS LAST, a.created_at, a.full_name`,
   );
 
-  const header = ["Dorsal", "Nombre", "Cédula", "Teléfono", "Estado", "Equipo", "Ruta", "Corte", "Talla", "Estatus de Pago", "Check-in", "Fecha Check-in"];
-  const lines = [header.join(",")];
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = "Reto Virgen de la Paz";
+  workbook.created = new Date();
 
-  const sizeCountsByCut: Record<string, Record<string, number>> = {
-    caballero: Object.fromEntries(JERSEY_SIZES_BY_CUT.caballero.map((s) => [s, 0])),
-    dama: Object.fromEntries(JERSEY_SIZES_BY_CUT.dama.map((s) => [s, 0])),
-  };
+  const BRAND_DARK = "FF0B1220";
+  const sheet = workbook.addWorksheet("Corredores", { views: [{ state: "frozen", ySplit: 1 }] });
+  sheet.columns = [
+    { header: "Dorsal", key: "bib", width: 9 },
+    { header: "Nombre completo", key: "name", width: 34 },
+    { header: "Cédula", key: "ci", width: 15 },
+    { header: "Teléfono", key: "phone", width: 18 },
+    { header: "Correo", key: "email", width: 32 },
+    { header: "Estado", key: "state", width: 18 },
+    { header: "Equipo", key: "team", width: 20 },
+    { header: "Ruta", key: "route", width: 13 },
+    { header: "Corte", key: "cut", width: 11 },
+    { header: "Talla", key: "size", width: 8 },
+    { header: "Pago", key: "pay", width: 12 },
+    { header: "Pagado (USD)", key: "paid", width: 13 },
+    { header: "Total (USD)", key: "total", width: 12 },
+    { header: "Check-in", key: "checkin", width: 10 },
+    { header: "Fecha de inscripción", key: "created", width: 20 },
+  ];
 
   for (const a of rows) {
-    lines.push(
-      [
-        a.bib_number ?? "",
-        csvEscape(a.full_name),
-        a.ci,
-        a.phone,
-        csvEscape(a.state ?? ""),
-        csvEscape(a.team_name ?? ""),
-        a.route,
-        a.jersey_cut,
-        a.jersey_size,
-        a.payment_status,
-        a.checked_in ? "SI" : "NO",
-        a.checked_in_at ? new Date(a.checked_in_at).toISOString() : "",
-      ].join(","),
-    );
-
-    if (sizeCountsByCut[a.jersey_cut] && a.jersey_size in sizeCountsByCut[a.jersey_cut]) {
-      sizeCountsByCut[a.jersey_cut][a.jersey_size] += 1;
-    }
+    sheet.addRow({
+      bib: a.bib_number ?? "",
+      name: a.full_name,
+      ci: a.ci,
+      phone: a.phone,
+      email: a.email ?? "",
+      state: a.state ?? "",
+      team: a.team_name ?? "",
+      route: ROUTE_LABELS[a.route] ?? a.route,
+      cut: a.jersey_cut === "dama" ? "Dama" : "Caballero",
+      size: a.jersey_size,
+      pay: PAYMENT_STATUS_LABELS[a.payment_status] ?? a.payment_status,
+      paid: Number(a.paid_usd),
+      total: Number(a.total_amount_usd),
+      checkin: a.checked_in ? "Sí" : "No",
+      created: a.created_at ? new Date(a.created_at) : "",
+    });
   }
 
+  const header = sheet.getRow(1);
+  header.height = 24;
+  header.eachCell((cell) => {
+    cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND_DARK } };
+    cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+  });
+  sheet.eachRow((row, n) => {
+    if (n === 1) return;
+    row.alignment = { vertical: "middle" };
+    row.eachCell((cell) => {
+      cell.border = { bottom: { style: "thin", color: { argb: "FFE2E8F0" } } };
+    });
+    if (n % 2 === 0) row.eachCell((cell) => (cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF4F7FB" } }));
+  });
+  for (const key of ["bib", "size", "checkin", "pay", "route", "cut"]) sheet.getColumn(key).alignment = { horizontal: "center", vertical: "middle" };
+  sheet.getColumn("bib").font = { bold: true };
+  sheet.getColumn("paid").numFmt = '"$"#,##0.00';
+  sheet.getColumn("total").numFmt = '"$"#,##0.00';
+  sheet.getColumn("created").numFmt = "dd/mm/yyyy hh:mm";
+  sheet.getRow(1).font = { bold: true, color: { argb: "FFFFFFFF" } };
+  sheet.autoFilter = { from: { row: 1, column: 1 }, to: { row: 1, column: sheet.columns.length } };
+
+  // --- Hoja de resumen ---
+  const summary = workbook.addWorksheet("Resumen");
+  summary.columns = [{ width: 30 }, { width: 14 }];
+  let r = 1;
+  function addSection(title: string, entries: [string, number][]) {
+    const titleRow = summary.getRow(r++);
+    titleRow.getCell(1).value = title;
+    titleRow.getCell(2).value = "Cantidad";
+    titleRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: BRAND_DARK } };
+    });
+    for (const [label, n] of entries) {
+      const row = summary.getRow(r++);
+      row.getCell(1).value = label;
+      row.getCell(2).value = n;
+      row.getCell(2).alignment = { horizontal: "center" };
+    }
+    r++;
+  }
+
+  addSection("Total de corredores", [["Inscritos", rows.length]]);
+  addSection("Por ruta", countBy(rows, (a) => ROUTE_LABELS[a.route] ?? a.route));
+  addSection("Por estado de procedencia", countBy(rows, (a) => a.state ?? "Sin indicar"));
+  addSection("Por estatus de pago", countBy(rows, (a) => PAYMENT_STATUS_LABELS[a.payment_status] ?? a.payment_status));
   for (const cut of JERSEY_CUTS) {
-    lines.push("");
-    lines.push(`RESUMEN DE TALLAS — ${cut.toUpperCase()}`);
-    for (const size of JERSEY_SIZES_BY_CUT[cut]) {
-      lines.push(`${size},${sizeCountsByCut[cut][size]}`);
-    }
+    const label = cut === "dama" ? "Tallas de jersey — Dama" : "Tallas de jersey — Caballero";
+    const counts = JERSEY_SIZES_BY_CUT[cut].map((size): [string, number] => [
+      size,
+      rows.filter((a) => a.jersey_cut === cut && a.jersey_size === size).length,
+    ]);
+    addSection(label, counts);
   }
 
-  res.setHeader("Content-Type", "text/csv; charset=utf-8");
-  res.setHeader("Content-Disposition", 'attachment; filename="corredores-reto-virgen-de-la-paz.csv"');
-  res.send(lines.join("\n"));
+  res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+  res.setHeader("Content-Disposition", 'attachment; filename="corredores-reto-virgen-de-la-paz.xlsx"');
+  await workbook.xlsx.write(res);
+  res.end();
 });

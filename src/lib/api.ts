@@ -77,13 +77,13 @@ export async function adminDelete<T>(path: string): Promise<T> {
 
 export async function adminDownloadExport(): Promise<void> {
   const res = await fetch(`${API_BASE}/api/admin/export`, { headers: authHeaders() });
-  if (!res.ok) throw new ApiError(`No se pudo exportar el CSV (HTTP ${res.status}).`);
+  if (!res.ok) throw new ApiError(`No se pudo exportar el Excel (HTTP ${res.status}).`);
 
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = "corredores-reto-virgen-de-la-paz.csv";
+  link.download = "corredores-reto-virgen-de-la-paz.xlsx";
   link.click();
   URL.revokeObjectURL(url);
 }

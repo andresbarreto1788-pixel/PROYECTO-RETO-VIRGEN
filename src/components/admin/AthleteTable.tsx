@@ -176,7 +176,7 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
           onClick={() => adminDownloadExport().catch((err) => setActionError(err instanceof ApiError ? err.message : "No se pudo exportar."))}
           className="ml-auto rounded-full border border-brand-card-border px-4 py-2 text-[10px] font-bold uppercase tracking-widest text-ink-muted transition-colors hover:text-ink"
         >
-          Exportar CSV
+          Exportar Excel
         </button>
       </div>
 
