@@ -316,6 +316,15 @@ adminRouter.patch("/athletes/:id/payment", requireAdmin, validateBody(paymentAct
       return;
     }
 
+    // Al quedar PAID por el panel también se asigna el dorsal (si no tiene), para que el
+    // certificado que se despacha abajo ya lo lleve en vez de "Se asigna en el check-in".
+    if (status === "PAID") {
+      await client.query(
+        "UPDATE athletes SET bib_number = nextval('bib_number_seq') WHERE id = $1 AND bib_number IS NULL",
+        [id],
+      );
+    }
+
     const athleteRes = await client.query("SELECT * FROM athletes WHERE id = $1", [id]);
     await client.query("COMMIT");
     const athlete = athleteRes.rows[0];
@@ -341,6 +350,65 @@ adminRouter.patch("/athletes/:id/payment", requireAdmin, validateBody(paymentAct
   } finally {
     client.release();
   }
+});
+
+// --- Asignar dorsales pendientes ------------------------------------------
+
+// Backfill idempotente: a cada atleta PAID sin dorsal le asigna el siguiente de la
+// secuencia (por orden de inscripción) y le envía su certificado actualizado. Con
+// dryRun=true solo lista a quién le tocaría, sin escribir ni enviar nada.
+adminRouter.post("/athletes/assign-missing-bibs", requireAdmin, async (req, res) => {
+  const dryRun = req.body?.dryRun === true;
+  const client = await pool.connect();
+  const assigned: { row: Record<string, any>; bibNumber: number | null }[] = [];
+  try {
+    await client.query("BEGIN");
+    const pending = await client.query(
+      `SELECT * FROM athletes WHERE payment_status = 'PAID' AND bib_number IS NULL
+       ORDER BY created_at, id FOR UPDATE`,
+    );
+    for (const row of pending.rows) {
+      let bibNumber: number | null = null;
+      if (!dryRun) {
+        const bibRes = await client.query("SELECT nextval('bib_number_seq') AS bib");
+        bibNumber = bibRes.rows[0].bib;
+        await client.query("UPDATE athletes SET bib_number = $1 WHERE id = $2", [bibNumber, row.id]);
+      }
+      assigned.push({ row, bibNumber });
+    }
+    await client.query(dryRun ? "ROLLBACK" : "COMMIT");
+  } catch (err) {
+    await client.query("ROLLBACK");
+    console.error("Error asignando dorsales pendientes:", err);
+    res.status(500).json({ error: "No se pudieron asignar los dorsales." });
+    return;
+  } finally {
+    client.release();
+  }
+
+  const results: { fullName: string; email: string | null; bibNumber: number | null; emailSent: boolean }[] = [];
+  for (const { row: a, bibNumber } of assigned) {
+    let emailSent = false;
+    if (!dryRun && a.email) {
+      emailSent = await dispatchCertificateEmail({
+        athleteId: a.id,
+        fullName: a.full_name,
+        ci: a.ci,
+        route: a.route,
+        jerseyCut: a.jersey_cut,
+        jerseySize: a.jersey_size,
+        bibNumber,
+        qrToken: a.qr_token,
+        email: a.email,
+      }).catch((err) => {
+        console.error("Error enviando certificado con dorsal:", err);
+        return false;
+      });
+    }
+    results.push({ fullName: a.full_name, email: a.email, bibNumber, emailSent });
+  }
+
+  res.json({ dryRun, count: results.length, results });
 });
 
 // --- Check-in ------------------------------------------------------------
