@@ -129,7 +129,9 @@ export const PAYMENT_INFO = {
   banco: "Banco Provincial",
   bancoCodigo: "0108",
   cuenta: "0108-0377-20-0100049415",
+  titular: "Gustavo Briceño",
   pagoMovil: {
+    titular: "Gustavo Briceño",
     banco: "0108 (Banco Provincial)",
     cedula: "18924508",
     telefono: "0414-0746270",

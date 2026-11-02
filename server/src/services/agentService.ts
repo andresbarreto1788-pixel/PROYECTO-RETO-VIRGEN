@@ -55,8 +55,8 @@ DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies). Estos datos
 - Desnivel acumulado aproximado: +1200 m. Puntos de hidratación: Km 8 y Km 20.
 - Kit del atleta: medalla conmemorativa troquelada, dorsal numerado y jersey oficial de finisher manga larga (diseño con pinos andinos y el logo de la Virgen), disponible en dos cortes: Caballero (tallas S, M, L, XL, XXL) y Dama (tallas XS, S, M, L, XL). El atleta elige corte y talla al inscribirse. El kit se entrega el día del evento en el paddock, presentando el QR del certificado.
 - Pago: Pago Móvil, Transferencia/Depósito, Zelle o Binance Pay. Se puede pagar completo o en plan parcial (mínimo 50% de inicial). Datos para pagar:
-  · Pago Móvil — Banco: 0108 (Banco Provincial) · Cédula/RIF: 18924508 · Teléfono: 0414-0746270.
-  · Transferencia/Depósito — Banco Provincial · Cuenta: 0108-0377-20-0100049415.
+  · Pago Móvil — Titular: Gustavo Briceño · Banco: 0108 (Banco Provincial) · Cédula/RIF: 18924508 · Teléfono: 0414-0746270.
+  · Transferencia/Depósito — Titular: Gustavo Briceño · Banco Provincial · Cuenta: 0108-0377-20-0100049415.
   · Zelle — 812-4935873 · Titular: Jhaiderson Pacheco.
   · Binance Pay — ID de Binance: 87916836 (usuario zero2024).
   Todos estos métodos tienen su código QR para escanear y pagar directo desde la app, disponibles en ${EVENT_WEBSITE} en la sección de inscripción (junto al conversor USD/Bs).
@@ -182,8 +182,8 @@ async function toolInfoEvento(): Promise<string> {
     entregaKit: "El día del evento en el paddock, presentando el QR del certificado.",
     metodosPago: ["Pago Móvil", "Transferencia/Depósito", "Zelle", "Binance Pay"],
     datosPago: {
-      pagoMovil: { banco: "0108 (Banco Provincial)", cedulaRif: "18924508", telefono: "0414-0746270" },
-      transferencia: { banco: "Banco Provincial", cuenta: "0108-0377-20-0100049415" },
+      pagoMovil: { titular: "Gustavo Briceño", banco: "0108 (Banco Provincial)", cedulaRif: "18924508", telefono: "0414-0746270" },
+      transferencia: { titular: "Gustavo Briceño", banco: "Banco Provincial", cuenta: "0108-0377-20-0100049415" },
       zelle: { telefono: "812-4935873", titular: "Jhaiderson Pacheco" },
       binancePay: { idBinance: "87916836", usuario: "zero2024" },
       nota: `Todos los métodos tienen su código QR para escanear en ${EVENT_WEBSITE}, sección de inscripción.`,
@@ -312,8 +312,8 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
     return {
       reply:
         `💳 Métodos de pago (completo o abono mínimo 50%):\n` +
-        `• Pago Móvil — ${info.datosPago.pagoMovil.banco} · Cédula/RIF ${info.datosPago.pagoMovil.cedulaRif} · Tel ${info.datosPago.pagoMovil.telefono}\n` +
-        `• Transferencia/Depósito — ${info.datosPago.transferencia.banco} · Cuenta ${info.datosPago.transferencia.cuenta}\n` +
+        `• Pago Móvil — Titular ${info.datosPago.pagoMovil.titular} · ${info.datosPago.pagoMovil.banco} · Cédula/RIF ${info.datosPago.pagoMovil.cedulaRif} · Tel ${info.datosPago.pagoMovil.telefono}\n` +
+        `• Transferencia/Depósito — Titular ${info.datosPago.transferencia.titular} · ${info.datosPago.transferencia.banco} · Cuenta ${info.datosPago.transferencia.cuenta}\n` +
         `• Zelle — ${info.datosPago.zelle.telefono} · Titular ${info.datosPago.zelle.titular}\n` +
         `• Binance Pay — ID Binance ${info.datosPago.binancePay.idBinance} (usuario ${info.datosPago.binancePay.usuario})\n` +
         `Todos tienen su código QR para escanear en ${info.sitioWeb}, sección de inscripción.`,

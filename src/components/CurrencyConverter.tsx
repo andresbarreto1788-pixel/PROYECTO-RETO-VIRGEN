@@ -102,6 +102,9 @@ export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
               <p className="font-bold uppercase text-ink">Pago Móvil</p>
             </div>
             <p className="mt-1.5 text-ink-muted">
+              Titular: <span className="text-ink">{PAYMENT_INFO.pagoMovil.titular}</span>
+            </p>
+            <p className="text-ink-muted">
               Banco: <span className="text-ink">{PAYMENT_INFO.pagoMovil.banco}</span>
             </p>
             <p className="text-ink-muted">
@@ -118,6 +121,9 @@ export function CurrencyConverter({ bcv }: CurrencyConverterProps) {
               <p className="font-bold uppercase text-ink">Transferencia / Depósito</p>
             </div>
             <p className="mt-1.5 text-ink-muted">
+              Titular: <span className="text-ink">{PAYMENT_INFO.titular}</span>
+            </p>
+            <p className="text-ink-muted">
               Banco: <span className="text-ink">{PAYMENT_INFO.banco}</span>
             </p>
             <p className="text-ink-muted">
