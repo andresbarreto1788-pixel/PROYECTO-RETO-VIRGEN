@@ -4,6 +4,7 @@ import { API_BASE, ApiError, adminDelete, adminDownloadCertificate, adminDownloa
 import { formatBs, formatUsd } from "../../lib/format";
 import type { Athlete, AthleteListResponse, AthleteRoute, PaymentStatus } from "../../types/admin";
 import { AddPaymentModal } from "./AddPaymentModal";
+import { VENEZUELA_STATES } from "../../data/venezuelaStates";
 import { ConfirmDialog } from "./ConfirmDialog";
 import { EditAthleteModal } from "./EditAthleteModal";
 
@@ -44,6 +45,7 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
   const [payingAthlete, setPayingAthlete] = useState<Athlete | null>(null);
   const [deletingAthlete, setDeletingAthlete] = useState<Athlete | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [editingStateId, setEditingStateId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -209,7 +211,45 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
                   <td className="px-3 py-2.5 font-bold text-brand-neon">
                     {athlete.bibNumber != null ? `#${athlete.bibNumber}` : <span className="font-normal text-ink-muted">—</span>}
                   </td>
-                  <td className="px-3 py-2.5 text-ink-muted">{athlete.state ?? "—"}</td>
+                  <td className="px-3 py-2.5 text-ink-muted">
+                    {editingStateId === athlete.id ? (
+                      <select
+                        autoFocus
+                        className={selectClass}
+                        defaultValue={athlete.state ?? ""}
+                        disabled={busy}
+                        onBlur={() => setEditingStateId(null)}
+                        onChange={(e) => {
+                          const next = e.target.value;
+                          setEditingStateId(null);
+                          if (next && next !== athlete.state) {
+                            runAction(athlete.id, () => adminPatch(`/api/admin/athletes/${athlete.id}`, { state: next }));
+                          }
+                        }}
+                      >
+                        <option value="">Selecciona…</option>
+                        {VENEZUELA_STATES.map((st) => (
+                          <option key={st} value={st}>
+                            {st}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5">
+                        {athlete.state ?? "—"}
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => setEditingStateId(athlete.id)}
+                          title="Colocar estado"
+                          aria-label="Colocar estado"
+                          className="rounded-full bg-white/10 p-1 text-ink-muted transition-colors hover:text-ink disabled:opacity-30"
+                        >
+                          <Pencil size={10} />
+                        </button>
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-2.5 text-ink-muted">{athlete.teamName ?? "—"}</td>
                   <td className="px-3 py-2.5 text-ink-muted">{athlete.route === "33K_REDOMA" ? "33K" : "22K"}</td>
                   <td className="px-3 py-2.5 text-ink-muted">
