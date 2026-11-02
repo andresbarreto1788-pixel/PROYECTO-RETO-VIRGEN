@@ -1,3 +1,4 @@
+import { VENEZUELA_STATES } from "../../data/venezuelaStates";
 import { X } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -23,6 +24,7 @@ export function AddTeamMemberModal({ team, onClose, onSaved }: AddTeamMemberModa
   const [ci, setCi] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [state, setState] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [bloodType, setBloodType] = useState<BloodType>("O+");
   const [jerseyCut, setJerseyCut] = useState<JerseyCut>("caballero");
@@ -49,6 +51,7 @@ export function AddTeamMemberModal({ team, onClose, onSaved }: AddTeamMemberModa
         ci,
         phone,
         ...(email ? { email } : {}),
+        ...(state ? { state } : {}),
         emergencyContact,
         bloodType,
         jerseyCut,
@@ -106,6 +109,18 @@ export function AddTeamMemberModal({ team, onClose, onSaved }: AddTeamMemberModa
               onChange={(e) => setEmergencyContact(e.target.value)}
               required
             />
+          </label>
+
+          <label className={labelClass}>
+            Estado de procedencia
+            <select className={inputClass} value={state} onChange={(e) => setState(e.target.value)} required>
+              <option value="">Selecciona…</option>
+              {VENEZUELA_STATES.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="grid grid-cols-2 gap-3">

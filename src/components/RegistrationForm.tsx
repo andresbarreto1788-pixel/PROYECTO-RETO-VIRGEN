@@ -1,3 +1,4 @@
+import { VENEZUELA_STATES } from "../data/venezuelaStates";
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { JERSEY_CUTS, JERSEY_SIZES_BY_CUT, PAYMENT_METHOD_LABELS, ROUTE_MODALITIES } from "../data/raceData";
@@ -38,6 +39,7 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
   const [idNumber, setIdNumber] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [state, setState] = useState("");
   const [emergencyContact, setEmergencyContact] = useState("");
   const [bloodType, setBloodType] = useState<BloodType>("O+");
   const [modality, setModality] = useState<RouteModalityId>(ROUTE_MODALITIES[0].id);
@@ -102,6 +104,7 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
     formData.set("idNumber", idNumber);
     formData.set("phone", phone);
     formData.set("email", email);
+    formData.set("state", state);
     formData.set("emergencyContact", emergencyContact);
     formData.set("bloodType", bloodType);
     formData.set("modality", modality);
@@ -126,6 +129,7 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
         idNumber,
         phone,
         email,
+        state,
         emergencyContact,
         bloodType,
         modality,
@@ -188,6 +192,17 @@ export function RegistrationForm({ bcvRate, onSuccess }: RegistrationFormProps) 
             onChange={(e) => setEmergencyContact(e.target.value)}
             placeholder="Nombre y teléfono"
           />
+        </label>
+        <label>
+          <span className={labelClass}>Estado de procedencia</span>
+          <select className={inputClass} value={state} onChange={(e) => setState(e.target.value)} required>
+            <option value="">Selecciona…</option>
+            {VENEZUELA_STATES.map((st) => (
+              <option key={st} value={st}>
+                {st}
+              </option>
+            ))}
+          </select>
         </label>
         <label>
           <span className={labelClass}>Grupo sanguíneo</span>

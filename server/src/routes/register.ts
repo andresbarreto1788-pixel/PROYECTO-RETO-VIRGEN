@@ -64,6 +64,7 @@ const registerSchema = z
     idNumber: idNumberSchema,
     phone: phoneSchema,
     email: emailSchema,
+    state: z.string().trim().min(2, "Estado inválido.").max(60).optional(),
     emergencyContact: z.string().trim().min(3, "Contacto de emergencia inválido.").max(100),
     bloodType: z.enum(["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"], { message: "Tipo de sangre inválido." }),
     modality: z.enum(["reto-33k", "reto-22k"], { message: "Modalidad inválida." }),
@@ -111,8 +112,8 @@ registerRouter.post(
 
       const athleteResult = await client.query(
         `INSERT INTO athletes
-          (full_name, ci, phone, email, emergency_contact, blood_type, route, jersey_cut, jersey_size, payment_status, total_amount_usd)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          (full_name, ci, phone, email, emergency_contact, blood_type, route, jersey_cut, jersey_size, payment_status, total_amount_usd, state)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
          RETURNING *`,
         [
           body.fullName,
@@ -126,6 +127,7 @@ registerRouter.post(
           body.jerseySize,
           paymentStatus,
           amountUsd,
+          body.state ?? null,
         ],
       );
       const athlete = athleteResult.rows[0];
@@ -178,6 +180,7 @@ const teamMemberSchema = z
     idNumber: idNumberSchema,
     phone: phoneSchema,
     email: emailSchema.optional(),
+    state: z.string().trim().min(2, "Estado inválido.").max(60).optional(),
     emergencyContact: z.string().trim().min(3, "Contacto de emergencia inválido.").max(100),
     bloodType: z.enum(["O+", "O-", "A+", "A-", "B+", "B-", "AB+", "AB-"], { message: "Tipo de sangre inválido." }),
     jerseyCut: z.enum(["caballero", "dama"], { message: "Corte de jersey inválido." }),
@@ -282,8 +285,8 @@ registerRouter.post(
       for (const member of members) {
         const athleteResult = await client.query(
           `INSERT INTO athletes
-            (full_name, ci, phone, email, emergency_contact, blood_type, route, jersey_cut, jersey_size, payment_status, total_amount_usd, team_id)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING_REVIEW', $10, $11)
+            (full_name, ci, phone, email, emergency_contact, blood_type, route, jersey_cut, jersey_size, payment_status, total_amount_usd, team_id, state)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'PENDING_REVIEW', $10, $11, $12)
            RETURNING *`,
           [
             member.fullName,
@@ -297,6 +300,7 @@ registerRouter.post(
             member.jerseySize,
             memberUsd,
             team.id,
+            member.state ?? null,
           ],
         );
         const athlete = athleteResult.rows[0];

@@ -1,3 +1,4 @@
+import { VENEZUELA_STATES } from "../data/venezuelaStates";
 import { ChevronDown, ChevronUp, Plus, Trash2, Users } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -33,6 +34,7 @@ function emptyMember(): TeamMemberInput {
     idNumber: "",
     phone: "",
     email: "",
+    state: "",
     emergencyContact: "",
     bloodType: "O+",
     jerseyCut: "caballero",
@@ -224,6 +226,7 @@ export function TeamRegistrationForm({ bcvRate, onSuccess }: TeamRegistrationFor
           idNumber: athlete.ci,
           phone: athlete.phone,
           email: athlete.email ?? "",
+          state: athlete.state ?? "",
           emergencyContact: athlete.emergencyContact,
           bloodType: athlete.bloodType,
           jerseyCut: athlete.jerseyCut,
@@ -421,6 +424,17 @@ export function TeamRegistrationForm({ bcvRate, onSuccess }: TeamRegistrationFor
                         onChange={(e) => updateMember(i, { emergencyContact: e.target.value })}
                         placeholder="Nombre y teléfono"
                       />
+                    </label>
+                    <label>
+                      <span className={smallLabelClass}>Estado de procedencia</span>
+                      <select className={smallInputClass} value={member.state} onChange={(e) => updateMember(i, { state: e.target.value })} required>
+                        <option value="">Selecciona…</option>
+                        {VENEZUELA_STATES.map((st) => (
+                          <option key={st} value={st}>
+                            {st}
+                          </option>
+                        ))}
+                      </select>
                     </label>
                     <label>
                       <span className={smallLabelClass}>Grupo sanguíneo</span>

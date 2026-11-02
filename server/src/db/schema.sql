@@ -22,6 +22,10 @@ CREATE TABLE IF NOT EXISTS athletes (
 -- campo de un despliegue previo se agrega aparte con ADD COLUMN IF NOT EXISTS.
 ALTER TABLE athletes ADD COLUMN IF NOT EXISTS email VARCHAR(150) NULL;
 
+-- Estado (o país) de procedencia del atleta. Nullable: las inscripciones previas a este
+-- campo no lo tienen y el admin lo puede completar desde la edición del atleta.
+ALTER TABLE athletes ADD COLUMN IF NOT EXISTS state VARCHAR(60) NULL;
+
 -- Corte del jersey ('caballero' | 'dama'), agregado junto a jersey_size para separar
 -- el rango de tallas de dama (XS-XL) del de caballero (S-XXL). Default 'caballero'
 -- para que las inscripciones existentes (todas previas a este campo) queden consistentes.

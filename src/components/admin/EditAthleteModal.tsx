@@ -1,3 +1,4 @@
+import { VENEZUELA_STATES } from "../../data/venezuelaStates";
 import { X } from "lucide-react";
 import { useState } from "react";
 import type { FormEvent } from "react";
@@ -22,6 +23,7 @@ export function EditAthleteModal({ athlete, onClose, onSaved }: EditAthleteModal
   const [fullName, setFullName] = useState(athlete.fullName);
   const [ci, setCi] = useState(athlete.ci);
   const [phone, setPhone] = useState(athlete.phone);
+  const [state, setState] = useState(athlete.state ?? "");
   const [emergencyContact, setEmergencyContact] = useState(athlete.emergencyContact);
   const [bloodType, setBloodType] = useState<BloodType>(athlete.bloodType);
   const [route, setRoute] = useState<AthleteRoute>(athlete.route);
@@ -47,6 +49,7 @@ export function EditAthleteModal({ athlete, onClose, onSaved }: EditAthleteModal
         fullName,
         ci,
         phone,
+        ...(state ? { state } : {}),
         emergencyContact,
         bloodType,
         route,
@@ -98,6 +101,18 @@ export function EditAthleteModal({ athlete, onClose, onSaved }: EditAthleteModal
               onChange={(e) => setEmergencyContact(e.target.value)}
               required
             />
+          </label>
+
+          <label className={labelClass}>
+            Estado de procedencia
+            <select className={inputClass} value={state} onChange={(e) => setState(e.target.value)}>
+              <option value="">Selecciona…</option>
+              {VENEZUELA_STATES.map((st) => (
+                <option key={st} value={st}>
+                  {st}
+                </option>
+              ))}
+            </select>
           </label>
 
           <div className="grid grid-cols-2 gap-3">

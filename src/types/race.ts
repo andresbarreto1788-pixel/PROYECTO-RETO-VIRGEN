@@ -58,6 +58,7 @@ export interface RegistrationData {
   idNumber: string;
   phone: string;
   email: string;
+  state: string;
   emergencyContact: string;
   bloodType: BloodType;
   modality: RouteModalityId;
@@ -92,6 +93,7 @@ export interface TeamMemberInput {
   idNumber: string;
   phone: string;
   email: string;
+  state: string;
   emergencyContact: string;
   bloodType: BloodType;
   jerseyCut: JerseyCut;

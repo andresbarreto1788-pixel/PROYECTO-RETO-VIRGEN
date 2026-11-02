@@ -25,6 +25,7 @@ export interface Athlete {
   ci: string;
   phone: string;
   email: string | null;
+  state: string | null;
   emergencyContact: string;
   bloodType: BloodType;
   route: AthleteRoute;

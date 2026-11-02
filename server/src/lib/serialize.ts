@@ -22,6 +22,7 @@ export function serializeAthlete(row: Record<string, unknown>) {
     ci: row.ci,
     phone: row.phone,
     email: row.email ?? null,
+    state: row.state ?? null,
     emergencyContact: row.emergency_contact,
     bloodType: row.blood_type,
     route: row.route,

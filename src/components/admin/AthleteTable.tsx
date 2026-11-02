@@ -181,10 +181,12 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
       {actionError && <p className="text-xs font-semibold text-brand-blue">{actionError}</p>}
 
       <div className="overflow-x-auto rounded-xl border border-brand-card-border">
-        <table className="w-full min-w-[860px] text-left text-xs">
+        <table className="w-full min-w-[980px] text-left text-xs">
           <thead className="bg-brand-card text-[10px] uppercase tracking-widest text-ink-muted">
             <tr>
               <th className="px-3 py-2.5">Atleta</th>
+              <th className="px-3 py-2.5">Dorsal</th>
+              <th className="px-3 py-2.5">Estado</th>
               <th className="px-3 py-2.5">Equipo</th>
               <th className="px-3 py-2.5">Ruta</th>
               <th className="px-3 py-2.5">Talla</th>
@@ -204,6 +206,10 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
                     <div className="font-semibold text-ink">{athlete.fullName}</div>
                     <div className="text-ink-muted">{athlete.ci}</div>
                   </td>
+                  <td className="px-3 py-2.5 font-bold text-brand-neon">
+                    {athlete.bibNumber != null ? `#${athlete.bibNumber}` : <span className="font-normal text-ink-muted">—</span>}
+                  </td>
+                  <td className="px-3 py-2.5 text-ink-muted">{athlete.state ?? "—"}</td>
                   <td className="px-3 py-2.5 text-ink-muted">{athlete.teamName ?? "—"}</td>
                   <td className="px-3 py-2.5 text-ink-muted">{athlete.route === "33K_REDOMA" ? "33K" : "22K"}</td>
                   <td className="px-3 py-2.5 text-ink-muted">
@@ -237,7 +243,7 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
                     )}
                   </td>
                   <td className="px-3 py-2.5 text-ink-muted">
-                    {athlete.checkedIn ? `Dorsal #${athlete.bibNumber}` : "No"}
+                    {athlete.checkedIn ? "Sí" : "No"}
                   </td>
                   <td className="px-3 py-2.5">
                     <div className="flex flex-wrap gap-1.5">
@@ -302,7 +308,7 @@ export function AthleteTable({ onMutated }: AthleteTableProps) {
             })}
             {!loading && items.length === 0 && (
               <tr>
-                <td colSpan={8} className="px-3 py-6 text-center text-ink-muted">
+                <td colSpan={10} className="px-3 py-6 text-center text-ink-muted">
                   No hay atletas para estos filtros.
                 </td>
               </tr>

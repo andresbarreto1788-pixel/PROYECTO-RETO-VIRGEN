@@ -172,6 +172,7 @@ const EDITABLE_FIELDS = [
   "fullName",
   "ci",
   "phone",
+  "state",
   "emergencyContact",
   "bloodType",
   "route",
@@ -182,6 +183,7 @@ const FIELD_TO_COLUMN: Record<(typeof EDITABLE_FIELDS)[number], string> = {
   fullName: "full_name",
   ci: "ci",
   phone: "phone",
+  state: "state",
   emergencyContact: "emergency_contact",
   bloodType: "blood_type",
   route: "route",
@@ -194,6 +196,7 @@ const editAthleteSchema = z
     fullName: z.string().trim().min(3, "Nombre inválido.").max(150),
     ci: idNumberSchema,
     phone: phoneSchema,
+    state: z.string().trim().min(2, "Estado inválido.").max(60),
     emergencyContact: z.string().trim().min(3, "Contacto de emergencia inválido.").max(100),
     bloodType: z.enum(BLOOD_TYPES, { message: "Tipo de sangre inválido." }),
     route: z.enum(ROUTES, { message: "Ruta inválida." }),
@@ -557,7 +560,7 @@ adminRouter.get("/export", requireAdmin, async (_req, res) => {
     `SELECT a.*, t.name AS team_name FROM athletes a LEFT JOIN teams t ON t.id = a.team_id ORDER BY a.route, a.full_name`,
   );
 
-  const header = ["Dorsal", "Nombre", "Cédula", "Teléfono", "Equipo", "Ruta", "Corte", "Talla", "Estatus de Pago", "Check-in", "Fecha Check-in"];
+  const header = ["Dorsal", "Nombre", "Cédula", "Teléfono", "Estado", "Equipo", "Ruta", "Corte", "Talla", "Estatus de Pago", "Check-in", "Fecha Check-in"];
   const lines = [header.join(",")];
 
   const sizeCountsByCut: Record<string, Record<string, number>> = {
@@ -572,6 +575,7 @@ adminRouter.get("/export", requireAdmin, async (_req, res) => {
         csvEscape(a.full_name),
         a.ci,
         a.phone,
+        csvEscape(a.state ?? ""),
         csvEscape(a.team_name ?? ""),
         a.route,
         a.jersey_cut,
