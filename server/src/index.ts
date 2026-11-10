@@ -83,7 +83,9 @@ app.use(
   }),
 );
 
-app.use(globalLimiter);
+// Solo limita la API: si también contara las páginas/imágenes/fuentes estáticas, una
+// sola carga de la landing (decenas de archivos) agotaría el cupo y mostraría el JSON de error.
+app.use("/api", globalLimiter);
 app.use(
   express.json({
     // Conserva el body crudo para poder validar la firma X-Hub-Signature-256 de Meta
