@@ -66,6 +66,8 @@ DATOS DEL EVENTO (úsalos tal cual, no los inventes ni los cambies). Estos datos
 - Redes y contacto: Sitio web ${EVENT_WEBSITE} · Instagram @retovirgendelapaz · WhatsApp de atención (este chat, Biker): 0422-0571234 · WhatsApp del organizador humano (Gustavo Briceño, para hablar con una persona real o validar pagos): 0414-0746270.
 - Patrocinadores: Galanet, Alcaldía de Trujillo, TODO tv, Soccer Burguer, Tetê, Henry's, Rizo Café, La Protectora Café Gourmet, CTT Turismo.
 
+PAGOS Y DUDAS SIN RESPUESTA: cuando alguien pregunte por pagos (cómo pagar, abonos, comprobantes, confirmar un pago, "ya pagué"), no repitas un saludo ni listes todo otra vez: dale el WhatsApp de Gustavo Briceño (${ORGANIZER_WHATSAPP_DISPLAY}) para que cuadre el pago directamente con él, y menciona que los QR de pago están en ${EVENT_WEBSITE}. Lo mismo si no sabes qué responder: da el contacto de Gustavo en vez de repetir el mensaje de bienvenida. Saluda y te presentas SOLO en el primer mensaje de la conversación.
+
 LÍMITES: no tienes información confirmada sobre edad mínima/máxima, uso obligatorio de casco u otras reglas de seguridad, política de reembolso/cancelación, ni hora límite (cutoff) de la ruta. Si preguntan algo de esto, o cualquier dato que no esté arriba ni puedas consultar con una herramienta, dilo con honestidad ("no tengo ese dato confirmado") y usa escalar_a_humano en vez de adivinar.
 
 Responde siempre en español, breve y cálido. Usa las herramientas disponibles para datos de inscripción, certificado y tasa del día — nunca los inventes. Si el atleta pide hablar con una persona real, usa la herramienta escalar_a_humano.
@@ -266,6 +268,15 @@ async function toolEscalarAHumano(conversationId: string): Promise<string> {
   );
 }
 
+// Respuesta con el contacto directo de Gustavo (sin alerta interna ni escalado): se usa
+// para temas de pago y para todo lo que el bot no sabe responder.
+function organizerContactReply(reason: string): string {
+  return (
+    `${reason} Escríbele directo a Gustavo Briceño, el organizador del evento: WhatsApp ${ORGANIZER_WHATSAPP_DISPLAY}. ` +
+    `Él te atiende en persona 🙌.`
+  );
+}
+
 async function executeTool(name: string, args: Record<string, unknown>, conversationId: string): Promise<string> {
   switch (name) {
     case "consultar_atleta":
@@ -316,7 +327,18 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
         `• Transferencia/Depósito — Titular ${info.datosPago.transferencia.titular} · ${info.datosPago.transferencia.banco} · Cuenta ${info.datosPago.transferencia.cuenta}\n` +
         `• Zelle — ${info.datosPago.zelle.telefono} · Titular ${info.datosPago.zelle.titular}\n` +
         `• Binance Pay — ID Binance ${info.datosPago.binancePay.idBinance} (usuario ${info.datosPago.binancePay.usuario})\n` +
-        `Todos tienen su código QR para escanear en ${info.sitioWeb}, sección de inscripción.`,
+        `Todos tienen su código QR para escanear en ${info.sitioWeb}, sección de inscripción.
+` +
+        `Para cuadrar tu pago, escríbele a Gustavo Briceño (organizador): ${ORGANIZER_WHATSAPP_DISPLAY}.`,
+      toolCalls,
+    };
+  }
+
+  // Cualquier otra consulta sobre pagos (abonos, comprobantes, referencias, "ya pagué"...):
+  // se cuadra directo con Gustavo en vez de repetir el saludo genérico.
+  if (/pag(o|os|ar|u[eé]|ado)|abono|abonar|comprobante|referencia|saldo|deuda|cuadrar/.test(lower)) {
+    return {
+      reply: organizerContactReply("Para cuadrar tu pago o confirmar un abono con el organizador,"),
       toolCalls,
     };
   }
@@ -390,10 +412,19 @@ async function runMock(conversationId: string, message: string): Promise<{ reply
     };
   }
 
+  // Solo un saludo suelto recibe la presentación; cualquier otra cosa que no sepamos
+  // responder se deriva a Gustavo en vez de repetir el mismo mensaje de bienvenida.
+  if (/^\s*(hola|holaa+|buenas|buen[oa]s (d[ií]as|tardes|noches)|hey|saludos|ola)\W*$/.test(lower)) {
+    return {
+      reply:
+        `¡Hola! Soy Biker, tu asistente virtual del Reto Virgen de la Paz 🏔️. Envíame tu cédula para consultar tu inscripción, pide tu certificado, o pregunta por horarios/hidratación/paddock. ` +
+        `Inscríbete en ${EVENT_WEBSITE}. ¿En qué te ayudo?`,
+      toolCalls,
+    };
+  }
+
   return {
-    reply:
-      `¡Hola! Soy Biker, tu asistente virtual del Reto Virgen de la Paz 🏔️. Envíame tu cédula para consultar tu inscripción, pide tu certificado, o pregunta por horarios/hidratación/paddock/pago. ` +
-      `Inscríbete en ${EVENT_WEBSITE}. ¿En qué te ayudo?`,
+    reply: organizerContactReply("No tengo esa información a la mano."),
     toolCalls,
   };
 }
