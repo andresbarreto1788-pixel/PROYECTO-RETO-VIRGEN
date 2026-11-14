@@ -47,6 +47,16 @@ export interface KitItem {
 export interface Sponsor {
   name: string;
   logo?: string;
+  href?: string;
+}
+
+export interface Lodging {
+  id: string;
+  name: string;
+  type: string;
+  logo: string;
+  whatsappDigits: string;
+  phone: string;
 }
 
 export type PaymentMethod = "pago-movil" | "transferencia" | "zelle" | "binance-pay";

@@ -1,6 +1,7 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { Globe, X } from "lucide-react";
+import { BedDouble, Globe, MessageCircle, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { LODGINGS, lodgingWhatsAppUrl } from "../data/raceData";
 
 const DISMISSED_KEY = "galanet-ad-dismissed";
 const OPEN_DELAY_MS = 1200;
@@ -63,7 +64,7 @@ export function GalanetAdModal() {
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={close}
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-surface/95 p-4 backdrop-blur-sm sm:p-8"
+          className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-surface/95 p-4 backdrop-blur-sm sm:p-8"
         >
           <motion.div
             initial={{ opacity: 0, y: 16, scale: 0.97 }}
@@ -71,7 +72,7 @@ export function GalanetAdModal() {
             exit={{ opacity: 0, y: 16, scale: 0.97 }}
             transition={{ duration: 0.25 }}
             onClick={(e) => e.stopPropagation()}
-            className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-brand-card-border bg-brand-card shadow-2xl"
+            className="relative my-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-brand-card-border bg-brand-card shadow-2xl"
           >
             <div className="flex items-center justify-between border-b border-brand-card-border px-4 py-3">
               <span className="text-[10px] font-bold uppercase tracking-widest text-ink-muted">
@@ -120,6 +121,35 @@ export function GalanetAdModal() {
                   <InstagramIcon />
                   @galanet_solution
                 </a>
+              </div>
+            </div>
+
+            <div className="border-t border-brand-card-border bg-surface/60 px-4 py-3">
+              <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand-neon">
+                <BedDouble size={13} aria-hidden="true" />
+                Reserva tu hospedaje con tiempo
+              </p>
+              <div className="grid grid-cols-3 gap-2">
+                {LODGINGS.map((lodging) => (
+                  <a
+                    key={lodging.id}
+                    href={lodgingWhatsAppUrl(lodging.id)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={`Reservar en ${lodging.name} por WhatsApp`}
+                    className="group flex flex-col items-center gap-1.5 rounded-lg border border-brand-card-border bg-brand-card p-2 text-center transition-colors hover:border-brand-neon/50"
+                  >
+                    <span className="flex h-11 w-full items-center justify-center rounded-md bg-white p-1 sm:h-14">
+                      <img src={lodging.logo} alt="" className="h-full w-full object-contain" />
+                    </span>
+                    <span className="line-clamp-1 text-[9px] font-bold uppercase tracking-wider text-ink sm:text-[10px]">
+                      {lodging.name}
+                    </span>
+                    <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-widest text-brand-neon">
+                      <MessageCircle size={10} aria-hidden="true" /> Reservar
+                    </span>
+                  </a>
+                ))}
               </div>
             </div>
           </motion.div>

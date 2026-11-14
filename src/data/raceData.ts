@@ -2,6 +2,7 @@ import type {
   ElevationPoint,
   HydrationPoint,
   JerseyCut,
+  Lodging,
   KitItem,
   PaymentMethod,
   RacePhase,
@@ -232,6 +233,40 @@ export const JERSEY_SIZES_BY_CUT: Record<JerseyCut, readonly string[]> = {
 // distingue por corte.
 export const JERSEY_SIZES = JERSEY_SIZES_BY_CUT.caballero;
 
+export const LODGINGS: Lodging[] = [
+  {
+    id: "la-travesia",
+    name: "Posada La Travesía",
+    type: "Posada turística",
+    logo: "/images/logo-posada-la-travesia.png",
+    whatsappDigits: "584162650707",
+    phone: "0416-265-0707",
+  },
+  {
+    id: "barcelos",
+    name: "Hotel Barcelos",
+    type: "Hotel, tasca y restaurante",
+    logo: "/images/logo-barcelos.png",
+    whatsappDigits: "584121246527",
+    phone: "0412-124-6527",
+  },
+  {
+    id: "caneca-turistica",
+    name: "Caneca Turística",
+    type: "Hotel boutique",
+    logo: "/images/logo-caneca-turistica.png",
+    whatsappDigits: "584121276288",
+    phone: "0412-127-6288",
+  },
+];
+
+export function lodgingWhatsAppUrl(id: string): string {
+  const lodging = LODGINGS.find((l) => l.id === id);
+  if (!lodging) return "#";
+  const text = `Hola, vengo de la página del Reto Virgen de la Paz y quiero reservar en ${lodging.name}.`;
+  return `https://wa.me/${lodging.whatsappDigits}?text=${encodeURIComponent(text)}`;
+}
+
 export const SPONSORS: Sponsor[] = [
   { name: "Galanet", logo: "/images/logo-galanet.png" },
   { name: "Coketikas", logo: "/images/logo-coketikas.png" },
@@ -241,12 +276,13 @@ export const SPONSORS: Sponsor[] = [
   { name: "Triple Gordo", logo: "/images/logo-triple-gordo.png" },
   { name: "Farmacia Avenida", logo: "/images/logo-farmacia-avenida.png" },
   { name: "Granja Acor", logo: "/images/logo-granja-acor.png" },
-  { name: "Hotel Barcelos", logo: "/images/logo-barcelos.png" },
+  { name: "Hotel Barcelos", logo: "/images/logo-barcelos.png", href: lodgingWhatsAppUrl("barcelos") },
   { name: "Ferrecarsa", logo: "/images/logo-ferrecarsa.png" },
   { name: "Gordos Gourmet", logo: "/images/logo-gordos-gourmet.png" },
   { name: "Punto Technology", logo: "/images/logo-punto-technology.png" },
   { name: "Salón Artístico", logo: "/images/logo-salon-artistico.png" },
   { name: "Grupo Visú", logo: "/images/logo-grupo-visu.png" },
-  { name: "Posada La Travesía", logo: "/images/logo-posada-la-travesia.png" },
+  { name: "Posada La Travesía", logo: "/images/logo-posada-la-travesia.png", href: lodgingWhatsAppUrl("la-travesia") },
   { name: "Roof Terraza", logo: "/images/logo-roof-terraza.png" },
+  { name: "Caneca Turística", logo: "/images/logo-caneca-turistica.png", href: lodgingWhatsAppUrl("caneca-turistica") },
 ];

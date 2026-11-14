@@ -1,4 +1,21 @@
+import type { ReactNode } from "react";
 import { SPONSORS } from "../data/raceData";
+
+function Tile({ href, label, children }: { href?: string; label: string; children: ReactNode }) {
+  const cls = "flex w-20 shrink-0 flex-col items-center gap-2 sm:w-24";
+  if (!href) return <div className={cls}>{children}</div>;
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label={label}
+      className={`${cls} transition-transform hover:scale-105`}
+    >
+      {children}
+    </a>
+  );
+}
 
 export function SponsorsMarquee() {
   const track = [...SPONSORS, ...SPONSORS];
@@ -12,9 +29,10 @@ export function SponsorsMarquee() {
         <div className="flex w-max animate-marquee items-center gap-12">
           {track.map((sponsor, i) =>
             sponsor.logo ? (
-              <div
+              <Tile
                 key={`${sponsor.name}-${i}`}
-                className="flex w-20 shrink-0 flex-col items-center gap-2 sm:w-24"
+                href={sponsor.href}
+                label={`Reservar en ${sponsor.name}`}
               >
                 <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-white p-2 ring-1 ring-black/5 sm:h-20 sm:w-20">
                   <img
@@ -26,7 +44,7 @@ export function SponsorsMarquee() {
                 <span className="text-center text-[10px] font-bold uppercase tracking-widest text-ink-muted/70">
                   {sponsor.name}
                 </span>
-              </div>
+              </Tile>
             ) : (
               <span
                 key={`${sponsor.name}-${i}`}

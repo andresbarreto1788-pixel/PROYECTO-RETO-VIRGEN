@@ -6,6 +6,7 @@ const NAV_LINKS = [
   { href: "#recorrido", label: "Recorrido" },
   { href: "#altimetria", label: "Altimetría" },
   { href: "#kit", label: "Kit Oficial" },
+  { href: "#hospedaje", label: "Hospedaje" },
   { href: "#inscripcion", label: "Inscripción" },
 ];
 
