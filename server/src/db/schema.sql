@@ -116,3 +116,12 @@ ALTER TABLE teams ADD COLUMN IF NOT EXISTS certificate_email VARCHAR(150) NULL;
 
 ALTER TABLE athletes ADD COLUMN IF NOT EXISTS team_id UUID REFERENCES teams(id) ON DELETE SET NULL;
 CREATE INDEX IF NOT EXISTS idx_athletes_team_id ON athletes(team_id);
+
+-- QR de inscripciones duplicadas que se fusionaron en una sola: el check-in los resuelve
+-- a la inscripción que sobrevivió, así que ambos códigos siguen siendo válidos.
+CREATE TABLE IF NOT EXISTS athlete_qr_aliases (
+  qr_token UUID PRIMARY KEY,
+  athlete_id UUID NOT NULL REFERENCES athletes(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_athlete_qr_aliases_athlete_id ON athlete_qr_aliases(athlete_id);

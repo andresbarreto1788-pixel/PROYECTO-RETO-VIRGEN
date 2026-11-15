@@ -8,6 +8,7 @@ import { validateBody } from "../middleware/validate.js";
 import { serializeAthlete } from "../lib/serialize.js";
 import { generateCertificatePdf } from "../services/certificateService.js";
 import { dispatchCertificateEmail } from "../services/certificateDispatch.js";
+import { mergeDuplicateAthletes } from "../services/mergeDuplicatesService.js";
 import { recomputeAthletePaymentStatus } from "../services/paymentService.js";
 
 export const adminRouter = Router();
@@ -351,6 +352,20 @@ adminRouter.patch("/athletes/:id/payment", requireAdmin, validateBody(paymentAct
   }
 });
 
+// --- Fusionar inscripciones duplicadas -------------------------------------
+
+// Une a quien se inscribió dos veces con la cédula escrita distinto ("V-123" / "123").
+// Por seguridad es dryRun salvo que se envíe { "dryRun": false } de forma explícita.
+adminRouter.post("/athletes/merge-duplicates", requireAdmin, async (req, res) => {
+  const dryRun = req.body?.dryRun !== false;
+  try {
+    res.json(await mergeDuplicateAthletes(dryRun));
+  } catch (err) {
+    console.error("Error fusionando duplicados:", err);
+    res.status(500).json({ error: "No se pudieron fusionar los duplicados." });
+  }
+});
+
 // --- Asignar dorsales pendientes ------------------------------------------
 
 // Backfill idempotente: a cada atleta PAID sin dorsal le asigna el siguiente de la
@@ -417,7 +432,10 @@ adminRouter.post("/athletes/assign-missing-bibs", requireAdmin, async (req, res)
 adminRouter.get("/check-in/preview/:qrToken", requireAdmin, async (req, res) => {
   const { qrToken } = req.params;
 
-  const athleteRes = await pool.query("SELECT * FROM athletes WHERE qr_token = $1", [qrToken]);
+  const athleteRes = await pool.query(
+    "SELECT * FROM athletes WHERE qr_token = $1 OR id = (SELECT athlete_id FROM athlete_qr_aliases WHERE qr_token = $1)",
+    [qrToken],
+  );
   if (athleteRes.rows.length === 0) {
     res.status(404).json({ error: "QR no reconocido." });
     return;
@@ -451,7 +469,10 @@ adminRouter.post("/check-in", requireAdmin, validateBody(checkInSchema), async (
   try {
     await client.query("BEGIN");
 
-    const athleteRes = await client.query("SELECT * FROM athletes WHERE qr_token = $1 FOR UPDATE", [qrToken]);
+    const athleteRes = await client.query(
+      "SELECT * FROM athletes WHERE qr_token = $1 OR id = (SELECT athlete_id FROM athlete_qr_aliases WHERE qr_token = $1) FOR UPDATE",
+      [qrToken],
+    );
     if (athleteRes.rows.length === 0) {
       await client.query("ROLLBACK");
       res.status(404).json({ error: "QR no reconocido." });
