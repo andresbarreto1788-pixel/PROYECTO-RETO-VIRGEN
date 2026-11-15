@@ -18,6 +18,24 @@ export const loginLimiter = rateLimit({
   message: { error: "Demasiados intentos. Intenta de nuevo más tarde." },
 });
 
+// Consulta de saldo por cédula + teléfono/correo: limita los intentos para que nadie pueda
+// adivinar datos de otros atletas probando combinaciones.
+export const balanceLookupLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 15,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiadas consultas desde esta red. Intenta de nuevo en unos minutos." },
+});
+
+export const balancePayLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Demasiados pagos enviados desde esta red. Intenta de nuevo más tarde." },
+});
+
 export const registerLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
   limit: 10,

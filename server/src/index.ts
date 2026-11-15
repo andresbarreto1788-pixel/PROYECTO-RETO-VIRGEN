@@ -13,6 +13,7 @@ import { pool } from "./db/pool.js";
 import { globalLimiter } from "./middleware/rateLimit.js";
 import { UPLOADS_DIR } from "./middleware/upload.js";
 import { registerRouter } from "./routes/register.js";
+import { balanceRouter } from "./routes/balance.js";
 import { adminRouter } from "./routes/admin.js";
 import { adminTeamsRouter } from "./routes/adminTeams.js";
 import { crmRouter } from "./routes/crm.js";
@@ -109,6 +110,7 @@ app.use(
 );
 
 app.use("/api/register", registerRouter);
+app.use("/api/balance", balanceRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/teams", adminTeamsRouter);
 app.use("/api/admin/crm", crmRouter);

@@ -1,6 +1,7 @@
 import confetti from "canvas-confetti";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useBcvRate } from "../hooks/useBcvRate";
 import { generateAthleteQr } from "../lib/qr";
 import type { RegistrationData, TeamRegistrationData } from "../types/race";
@@ -67,6 +68,13 @@ export function RegistrationSection() {
             Completa tus datos, elige tu modalidad y talla de jersey, y confirma el pago en USD o Bs. Recibirás un
             comprobante con QR único de atleta para retirar tu kit oficial. ¿Van en equipo? Inscríbanse juntos: desde
             10 integrantes el equipo completo obtiene 10% de descuento.
+          </p>
+          <p className="mt-3 text-sm text-ink-muted">
+            ¿Ya abonaste y te falta una cuota?{" "}
+            <Link to="/pagar-saldo" className="font-bold text-brand-neon underline-offset-4 hover:underline">
+              Consulta y paga tu saldo aquí
+            </Link>
+            .
           </p>
         </div>
 
